@@ -1,0 +1,54 @@
+.app-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+}
+
+.app-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-left: 16px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.drawer-container {
+  flex: 1;
+  margin-top: 64px; // Height of mat-toolbar
+}
+
+.sidenav {
+  width: 250px;
+}
+
+.sidenav .mat-mdc-list-item.active {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.content {
+  padding: 20px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+// Mobile responsiveness
+@media (max-width: 768px) {
+  .sidenav {
+    width: 200px;
+  }
+  
+  .app-title {
+    font-size: 1rem;
+    margin-left: 8px;
+  }
+}

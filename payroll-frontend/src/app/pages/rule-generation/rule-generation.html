@@ -1,0 +1,314 @@
+<div class="rule-generation-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>auto_fix_high</mat-icon>
+      Generate Payroll Rules
+    </h1>
+    <p class="page-subtitle">
+      Describe your payroll rule in plain English and let AI generate the C# code for you
+    </p>
+  </div>
+
+  <div class="input-container">
+    <!-- Rule Input Section -->
+    <mat-card class="input-section">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>edit</mat-icon>
+          Rule Description
+        </mat-card-title>
+        <mat-card-subtitle>Describe your payroll rule in natural language</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <form [formGroup]="ruleForm" (ngSubmit)="generateRule()">
+          <mat-form-field class="full-width">
+            <mat-label>Rule Statement</mat-label>
+            <input matInput formControlName="ruleStatement" placeholder="e.g., Overtime pay at 1.5x rate after 8 hours per day">
+            <mat-error *ngIf="ruleForm.get('ruleStatement')?.hasError('required')">
+              Rule statement is required
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="full-width">
+            <mat-label>Detailed Description (Optional)</mat-label>
+            <textarea 
+              matInput 
+              formControlName="ruleDescription" 
+              rows="3"
+              placeholder="Provide additional details about your rule, edge cases, or specific conditions">
+            </textarea>
+          </mat-form-field>
+
+          <mat-form-field class="full-width">
+            <mat-label>Organization ID</mat-label>
+            <input matInput formControlName="organizationId" placeholder="demo-org">
+            <mat-error *ngIf="ruleForm.get('organizationId')?.hasError('required')">
+              Organization ID is required
+            </mat-error>
+          </mat-form-field>
+
+          <div class="form-actions">
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit"
+              [disabled]="ruleForm.invalid || isLoading">
+              <mat-icon>auto_fix_high</mat-icon>
+              <span *ngIf="!isLoading">Generate Rule</span>
+              <span *ngIf="isLoading">Generating...</span>
+            </button>
+            
+            <button 
+              mat-stroked-button 
+              type="button"
+              (click)="clearForm()"
+              [disabled]="isLoading">
+              <mat-icon>clear</mat-icon>
+              Clear Form
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Loading Section -->
+  <div class="loading-section" *ngIf="isLoading">
+    <mat-card>
+      <mat-card-content>
+        <div class="loading-content">
+          <mat-progress-spinner diameter="60" mode="indeterminate"></mat-progress-spinner>
+          <h3>AI is Processing Your Rule</h3>
+          <p>{{ currentLoadingStep }}</p>
+          <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Results Section -->
+  <div class="results-section" *ngIf="generationResult && !isLoading">
+    <mat-card class="result-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon [color]="generationResult.compilationErrors.length > 0 ? 'warn' : 'primary'">
+            {{ generationResult.compilationErrors.length > 0 ? 'error' : 'check_circle' }}
+          </mat-icon>
+          Generation Results
+        </mat-card-title>
+        <mat-card-subtitle>
+          Status: {{ generationResult.status }}
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-tab-group>
+          <!-- Intent Tab -->
+          <mat-tab label="Extracted Intent">
+            <div class="tab-content">
+              <h4>AI's Understanding of Your Rule:</h4>
+              <div class="intent-display">
+                <pre>{{ generationResult.intent }}</pre>
+              </div>
+            </div>
+          </mat-tab>
+
+          <!-- Generated Code Tab -->
+          <mat-tab label="Generated C# Code">
+            <div class="tab-content">
+              <div class="code-header">
+                <h4>Generated C# Function:</h4>
+                <button 
+                  mat-icon-button 
+                  matTooltip="Copy to clipboard"
+                  (click)="copyCode()">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+              <div class="code-container">
+                <pre class="code-block"><code>{{ generationResult.generatedCode }}</code></pre>
+              </div>
+            </div>
+          </mat-tab>
+
+          <!-- Compilation Results Tab -->
+          <mat-tab label="Compilation Status">
+            <div class="tab-content">
+              <div *ngIf="generationResult.compilationErrors.length === 0" class="success-section">
+                <div class="success-header">
+                  <mat-icon color="primary" class="large-icon">check_circle</mat-icon>
+                  <div class="success-info">
+                    <h3>✅ Compilation Successful!</h3>
+                    <p>Your rule has been generated and compiled successfully. The C# code is syntactically correct and ready for testing and activation.</p>
+                  </div>
+                </div>
+                
+                <mat-card class="success-details">
+                  <mat-card-content>
+                    <div class="compilation-success">
+                      <mat-icon color="primary">build_circle</mat-icon>
+                      <div>
+                        <h4>Code Quality Check Passed</h4>
+                        <ul>
+                          <li>✓ Syntax is valid</li>
+                          <li>✓ All references resolved</li>
+                          <li>✓ Function signature is correct</li>
+                          <li>✓ Ready for production use</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+                
+                <div class="action-buttons">
+                  <button 
+                    mat-raised-button 
+                    color="primary"
+                    (click)="testRule()"
+                    [disabled]="testingRule">
+                    <mat-icon>play_arrow</mat-icon>
+                    <span *ngIf="!testingRule">Test Rule</span>
+                    <span *ngIf="testingRule">Testing...</span>
+                  </button>
+                  
+                  <button 
+                    mat-raised-button 
+                    color="accent"
+                    (click)="activateRule()"
+                    [disabled]="activatingRule">
+                    <mat-icon>flash_on</mat-icon>
+                    <span *ngIf="!activatingRule">Activate Rule</span>
+                    <span *ngIf="activatingRule">Activating...</span>
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="generationResult.compilationErrors.length > 0" class="error-section">
+                <div class="error-header">
+                  <mat-icon color="warn" class="large-icon">error</mat-icon>
+                  <div class="error-info">
+                    <h3>Compilation Failed</h3>
+                    <p>The generated C# code contains {{ generationResult.compilationErrors.length }} error(s) that prevent compilation:</p>
+                  </div>
+                </div>
+                
+                <mat-expansion-panel class="error-details-panel">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <mat-icon>bug_report</mat-icon>
+                      <span>View Detailed Error Messages</span>
+                    </mat-panel-title>
+                    <mat-panel-description>
+                      Click to see technical details about the compilation errors
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  
+                  <div class="compilation-errors">
+                    <div *ngFor="let error of generationResult.compilationErrors; let i = index" class="error-item">
+                      <div class="error-number">Error {{ i + 1 }}:</div>
+                      <div class="error-message">
+                        <pre class="error-text">{{ formatCompilationError(error) }}</pre>
+                      </div>
+                    </div>
+                  </div>
+                </mat-expansion-panel>
+
+                <div class="error-help">
+                  <mat-card class="help-card">
+                    <mat-card-content>
+                      <div class="help-section">
+                        <mat-icon color="primary">lightbulb</mat-icon>
+                        <div class="help-content">
+                          <h4>What does this mean?</h4>
+                          <p>The AI-generated code has syntax or logical errors that prevent it from being compiled into a working rule. This can happen when:</p>
+                          <ul>
+                            <li>The rule description was ambiguous or contained conflicting requirements</li>
+                            <li>Complex business logic couldn't be automatically translated to code</li>
+                            <li>Referenced properties or methods don't exist in the current context</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </mat-card-content>
+                  </mat-card>
+                </div>
+
+                <div class="error-actions">
+                  <button 
+                    mat-raised-button 
+                    color="primary"
+                    (click)="regenerateRule()"
+                    class="retry-button">
+                    <mat-icon>refresh</mat-icon>
+                    Try Again
+                  </button>
+                  
+                  <button 
+                    mat-stroked-button 
+                    color="accent"
+                    (click)="improveRuleDescription()"
+                    class="improve-button">
+                    <mat-icon>edit</mat-icon>
+                    Improve Description
+                  </button>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Test Results Section -->
+  <div class="test-results-section" *ngIf="testResults">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>fact_check</mat-icon>
+          Test Results
+        </mat-card-title>
+        <mat-card-subtitle>Rule tested with sample data</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="test-scenario-info">
+          <p><strong>Test Employee:</strong> {{ testResults.employeeName }}</p>
+          <p><strong>Shift:</strong> {{ formatDate(testResults.shiftStart) }} - {{ formatDate(testResults.shiftEnd) }}</p>
+          <p><strong>Total Hours:</strong> {{ testResults.totalHours }}</p>
+        </div>
+
+        <mat-table [dataSource]="testResults.payCodeAllocations" class="results-table">
+          <ng-container matColumnDef="payCodeName">
+            <mat-header-cell *matHeaderCellDef>Pay Code</mat-header-cell>
+            <mat-cell *matCellDef="let element">
+              <mat-chip [color]="getPayCodeColor(element.payCodeName)">
+                {{ element.payCodeName }}
+              </mat-chip>
+            </mat-cell>
+          </ng-container>
+          
+          <ng-container matColumnDef="hours">
+            <mat-header-cell *matHeaderCellDef>Hours</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.hours }}</mat-cell>
+          </ng-container>
+          
+          <ng-container matColumnDef="description">
+            <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.description }}</mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="['payCodeName', 'hours', 'description']"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: ['payCodeName', 'hours', 'description']"></mat-row>
+        </mat-table>
+
+        <div class="test-actions">
+          <button mat-stroked-button (click)="testResults = null">
+            <mat-icon>close</mat-icon>
+            Close Results
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

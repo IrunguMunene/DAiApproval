@@ -1,0 +1,597 @@
+<div class="rule-testing-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>play_arrow</mat-icon>
+      Rule Testing
+    </h1>
+    <p class="page-subtitle">
+      Test your payroll rules with individual shifts or bulk CSV uploads
+    </p>
+  </div>
+
+  <!-- Rule Selection Section -->
+  <div class="rule-selection-section">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>rule</mat-icon>
+          Select Testing Mode
+        </mat-card-title>
+        <mat-card-subtitle>Choose to test individual rules or orchestrate all active rules</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <div *ngIf="isLoading" class="loading-rules">
+          <mat-progress-spinner diameter="30" mode="indeterminate"></mat-progress-spinner>
+          <span>Loading available rules...</span>
+        </div>
+        
+        <div *ngIf="!isLoading" class="testing-mode-selection">
+          <mat-radio-group [(ngModel)]="testingMode" class="testing-mode-group">
+            <mat-radio-button value="single" class="testing-mode-option">
+              <div class="mode-content">
+                <div class="mode-header">
+                  <mat-icon>check_circle_outline</mat-icon>
+                  <strong>Test Single Rule</strong>
+                </div>
+                <div class="mode-description">Test one specific rule against shifts</div>
+              </div>
+            </mat-radio-button>
+            
+            <mat-radio-button value="all" class="testing-mode-option">
+              <div class="mode-content">
+                <div class="mode-header">
+                  <mat-icon>rule_folder</mat-icon>
+                  <strong>Test All Rules (Orchestration)</strong>
+                </div>
+                <div class="mode-description">Apply all active rules together with conflict detection</div>
+              </div>
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+        
+        <mat-form-field *ngIf="!isLoading && testingMode === 'single'" appearance="outline" class="rule-selector">
+          <mat-label>Select Payroll Rule</mat-label>
+          <mat-select [(value)]="selectedRuleId">
+            <mat-option *ngFor="let rule of availableRules" [value]="rule.id">
+              <div class="rule-option">
+                <strong>{{ rule.ruleStatement }}</strong>
+                <div class="rule-meta">v{{ rule.version }} • {{ rule.createdBy }}</div>
+              </div>
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div *ngIf="!isLoading && testingMode === 'all'" class="all-rules-info">
+          <mat-icon color="primary">info</mat-icon>
+          <span>{{ availableRules.length }} active rules will be tested and orchestrated</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Testing Methods Tabs -->
+  <div class="testing-methods-section">
+    <mat-tab-group [(selectedIndex)]="selectedTab" class="testing-tabs">
+      
+      <!-- Manual Shift Testing Tab -->
+      <mat-tab label="Manual Testing">
+        <div class="tab-content">
+          <mat-card class="manual-testing-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>edit</mat-icon>
+                Enter Shift Details
+              </mat-card-title>
+              <mat-card-subtitle>Test a single shift by entering the details manually</mat-card-subtitle>
+            </mat-card-header>
+            
+            <mat-card-content>
+              <form [formGroup]="manualShiftForm" (ngSubmit)="testManualShift()">
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Employee Name</mat-label>
+                    <input matInput formControlName="employeeName" placeholder="John Doe">
+                    <mat-error *ngIf="manualShiftForm.get('employeeName')?.hasError('required')">
+                      Employee name is required
+                    </mat-error>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Start Date & Time</mat-label>
+                    <input matInput 
+                           type="datetime-local" 
+                           formControlName="startDateTime">
+                    <mat-error *ngIf="manualShiftForm.get('startDateTime')?.hasError('required')">
+                      Start date/time is required
+                    </mat-error>
+                  </mat-form-field>
+                  
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>End Date & Time</mat-label>
+                    <input matInput 
+                           type="datetime-local" 
+                           formControlName="endDateTime">
+                    <mat-error *ngIf="manualShiftForm.get('endDateTime')?.hasError('required')">
+                      End date/time is required
+                    </mat-error>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Organization ID</mat-label>
+                    <input matInput formControlName="organizationId" placeholder="demo-org">
+                    <mat-error *ngIf="manualShiftForm.get('organizationId')?.hasError('required')">
+                      Organization ID is required
+                    </mat-error>
+                  </mat-form-field>
+                </div>
+
+                <div class="form-actions">
+                  <button mat-raised-button 
+                          color="primary" 
+                          type="submit"
+                          [disabled]="manualShiftForm.invalid || (testingMode === 'single' && !selectedRuleId) || isTesting">
+                    <mat-icon>{{ testingMode === 'all' ? 'rule_folder' : 'play_arrow' }}</mat-icon>
+                    <span *ngIf="!isTesting && testingMode === 'single'">Test Shift</span>
+                    <span *ngIf="!isTesting && testingMode === 'all'">Test All Rules</span>
+                    <span *ngIf="isTesting">{{ testingMode === 'all' ? 'Orchestrating...' : 'Testing...' }}</span>
+                  </button>
+                  
+                  <button mat-stroked-button 
+                          type="button"
+                          (click)="clearManualTest()"
+                          [disabled]="isTesting">
+                    <mat-icon>clear</mat-icon>
+                    Clear
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Single Rule Test Results -->
+          <div class="test-results-section" *ngIf="testResult">
+            <mat-card class="results-card">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon color="primary">fact_check</mat-icon>
+                  Single Rule Test Results
+                </mat-card-title>
+                <mat-card-subtitle>Payroll classification for {{ testResult.shift.employeeName }}</mat-card-subtitle>
+              </mat-card-header>
+              
+              <mat-card-content>
+                <div class="shift-summary">
+                  <div class="summary-item">
+                    <strong>Employee:</strong> {{ testResult.shift.employeeName }}
+                  </div>
+                  <div class="summary-item">
+                    <strong>Shift:</strong> {{ formatDateTime(testResult.shift.startDateTime) }} - {{ formatDateTime(testResult.shift.endDateTime) }}
+                  </div>
+                  <div class="summary-item">
+                    <strong>Total Hours:</strong> {{ getTotalHours(testResult.shift) | number:'1.2-2' }}
+                  </div>
+                </div>
+
+                <mat-table [dataSource]="testResult.result!.payCodeAllocations" class="results-table" *ngIf="testResult.result">
+                  <ng-container matColumnDef="payCode">
+                    <mat-header-cell *matHeaderCellDef>Pay Code</mat-header-cell>
+                    <mat-cell *matCellDef="let allocation">
+                      <mat-chip [color]="getPayCodeColor(allocation.payCodeName)">
+                        {{ allocation.payCodeName }}
+                      </mat-chip>
+                    </mat-cell>
+                  </ng-container>
+                  
+                  <ng-container matColumnDef="hours">
+                    <mat-header-cell *matHeaderCellDef>Hours</mat-header-cell>
+                    <mat-cell *matCellDef="let allocation">{{ allocation.hours | number:'1.2-2' }}</mat-cell>
+                  </ng-container>
+                  
+                  <ng-container matColumnDef="description">
+                    <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                    <mat-cell *matCellDef="let allocation">{{ allocation.description }}</mat-cell>
+                  </ng-container>
+
+                  <mat-header-row *matHeaderRowDef="['payCode', 'hours', 'description']"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: ['payCode', 'hours', 'description']"></mat-row>
+                </mat-table>
+              </mat-card-content>
+            </mat-card>
+          </div>
+
+          <!-- Orchestration Results -->
+          <div class="orchestration-results-section" *ngIf="orchestrationResult">
+            <!-- Orchestration Summary -->
+            <mat-card class="orchestration-summary-card">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon color="primary">rule_folder</mat-icon>
+                  Rule Orchestration Results
+                </mat-card-title>
+                <mat-card-subtitle>
+                  Applied {{ orchestrationResult.individualRuleResults.length }} rules for {{ orchestrationResult.employeeName }}
+                  <mat-icon *ngIf="orchestrationResult.hasConflicts" color="warn" class="conflict-indicator">warning</mat-icon>
+                </mat-card-subtitle>
+              </mat-card-header>
+              
+              <mat-card-content>
+                <div class="orchestration-summary">
+                  <div class="summary-stats">
+                    <div class="stat-card">
+                      <mat-icon color="primary">schedule</mat-icon>
+                      <div class="stat-content">
+                        <div class="stat-value">{{ orchestrationResult.totalShiftHours | number:'1.2-2' }}</div>
+                        <div class="stat-label">Total Hours</div>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                      <mat-icon color="accent">check_circle</mat-icon>
+                      <div class="stat-content">
+                        <div class="stat-value">{{ getSuccessfulRulesCount() }}</div>
+                        <div class="stat-label">Successful Rules</div>
+                      </div>
+                    </div>
+                    
+                    <div class="stat-card" [class.warning]="orchestrationResult.hasConflicts">
+                      <mat-icon [color]="orchestrationResult.hasConflicts ? 'warn' : 'primary'">
+                        {{ orchestrationResult.hasConflicts ? 'warning' : 'done_all' }}
+                      </mat-icon>
+                      <div class="stat-content">
+                        <div class="stat-value">{{ orchestrationResult.conflicts.length }}</div>
+                        <div class="stat-label">Conflicts</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Conflicts (if any) -->
+            <mat-card *ngIf="orchestrationResult.hasConflicts" class="conflicts-card">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon color="warn">warning</mat-icon>
+                  Rule Conflicts Detected
+                </mat-card-title>
+                <mat-card-subtitle>Multiple rules are affecting the same pay codes</mat-card-subtitle>
+              </mat-card-header>
+              
+              <mat-card-content>
+                <mat-expansion-panel *ngFor="let conflict of orchestrationResult.conflicts" class="conflict-panel">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <mat-chip color="warn">{{ conflict.payCodeName }}</mat-chip>
+                      <span class="conflict-summary">{{ conflict.conflictingRules.length }} conflicting rules</span>
+                    </mat-panel-title>
+                    <mat-panel-description>
+                      {{ conflict.description }}
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  
+                  <div class="conflict-details">
+                    <mat-table [dataSource]="conflict.conflictingRules">
+                      <ng-container matColumnDef="rule">
+                        <mat-header-cell *matHeaderCellDef>Rule</mat-header-cell>
+                        <mat-cell *matCellDef="let rule">
+                          <div class="rule-info">
+                            <strong>{{ rule.ruleStatement }}</strong>
+                          </div>
+                        </mat-cell>
+                      </ng-container>
+                      
+                      <ng-container matColumnDef="hours">
+                        <mat-header-cell *matHeaderCellDef>Hours</mat-header-cell>
+                        <mat-cell *matCellDef="let rule">{{ rule.hours | number:'1.2-2' }}</mat-cell>
+                      </ng-container>
+                      
+                      <ng-container matColumnDef="description">
+                        <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                        <mat-cell *matCellDef="let rule">{{ rule.description }}</mat-cell>
+                      </ng-container>
+
+                      <mat-header-row *matHeaderRowDef="['rule', 'hours', 'description']"></mat-header-row>
+                      <mat-row *matRowDef="let row; columns: ['rule', 'hours', 'description']"></mat-row>
+                    </mat-table>
+                  </div>
+                </mat-expansion-panel>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Individual Rule Results -->
+            <mat-card class="individual-results-card">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon>list</mat-icon>
+                  Individual Rule Results
+                </mat-card-title>
+                <mat-card-subtitle>Detailed breakdown of each rule execution</mat-card-subtitle>
+              </mat-card-header>
+              
+              <mat-card-content>
+                <mat-accordion class="individual-rules-accordion">
+                  <mat-expansion-panel *ngFor="let ruleResult of orchestrationResult.individualRuleResults; trackBy: trackByRuleId">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>
+                        <mat-icon [color]="ruleResult.executedSuccessfully ? 'primary' : 'warn'">
+                          {{ ruleResult.executedSuccessfully ? 'check_circle' : 'error' }}
+                        </mat-icon>
+                        <span class="rule-title">{{ ruleResult.ruleStatement }}</span>
+                      </mat-panel-title>
+                      <mat-panel-description>
+                        <span *ngIf="ruleResult.executedSuccessfully" class="success-text">
+                          Executed successfully
+                        </span>
+                        <span *ngIf="!ruleResult.executedSuccessfully" class="error-text">
+                          {{ ruleResult.errorMessage }}
+                        </span>
+                      </mat-panel-description>
+                    </mat-expansion-panel-header>
+                    
+                    <div class="rule-result-details" *ngIf="ruleResult.executedSuccessfully && ruleResult.result">
+                      <mat-table [dataSource]="ruleResult.result.payCodeAllocations">
+                        <ng-container matColumnDef="payCode">
+                          <mat-header-cell *matHeaderCellDef>Pay Code</mat-header-cell>
+                          <mat-cell *matCellDef="let allocation">
+                            <mat-chip [color]="getPayCodeColor(allocation.payCodeName)">
+                              {{ allocation.payCodeName }}
+                            </mat-chip>
+                          </mat-cell>
+                        </ng-container>
+                        
+                        <ng-container matColumnDef="hours">
+                          <mat-header-cell *matHeaderCellDef>Hours</mat-header-cell>
+                          <mat-cell *matCellDef="let allocation">{{ allocation.hours | number:'1.2-2' }}</mat-cell>
+                        </ng-container>
+                        
+                        <ng-container matColumnDef="description">
+                          <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                          <mat-cell *matCellDef="let allocation">{{ allocation.description }}</mat-cell>
+                        </ng-container>
+
+                        <mat-header-row *matHeaderRowDef="['payCode', 'hours', 'description']"></mat-header-row>
+                        <mat-row *matRowDef="let row; columns: ['payCode', 'hours', 'description']"></mat-row>
+                      </mat-table>
+                    </div>
+                  </mat-expansion-panel>
+                </mat-accordion>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Final Orchestrated Result -->
+            <mat-card class="final-result-card" *ngIf="orchestrationResult.combinedResult">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon color="accent">done_all</mat-icon>
+                  Final Orchestrated Result
+                </mat-card-title>
+                <mat-card-subtitle>Combined result after conflict resolution</mat-card-subtitle>
+              </mat-card-header>
+              
+              <mat-card-content>
+                <mat-table [dataSource]="orchestrationResult.combinedResult.payCodeAllocations" class="final-results-table">
+                  <ng-container matColumnDef="payCode">
+                    <mat-header-cell *matHeaderCellDef>Pay Code</mat-header-cell>
+                    <mat-cell *matCellDef="let allocation">
+                      <mat-chip [color]="getPayCodeColor(allocation.payCodeName)" class="large-chip">
+                        {{ allocation.payCodeName }}
+                      </mat-chip>
+                    </mat-cell>
+                  </ng-container>
+                  
+                  <ng-container matColumnDef="hours">
+                    <mat-header-cell *matHeaderCellDef>Hours</mat-header-cell>
+                    <mat-cell *matCellDef="let allocation" class="hours-cell">
+                      <strong>{{ allocation.hours | number:'1.2-2' }}</strong>
+                    </mat-cell>
+                  </ng-container>
+                  
+                  <ng-container matColumnDef="description">
+                    <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                    <mat-cell *matCellDef="let allocation">{{ allocation.description }}</mat-cell>
+                  </ng-container>
+
+                  <mat-header-row *matHeaderRowDef="['payCode', 'hours', 'description']"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: ['payCode', 'hours', 'description']"></mat-row>
+                </mat-table>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- CSV Bulk Testing Tab -->
+      <mat-tab label="CSV Bulk Testing">
+        <div class="tab-content">
+          <mat-card class="csv-upload-card">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>upload_file</mat-icon>
+                Upload CSV File
+              </mat-card-title>
+              <mat-card-subtitle>Test multiple shifts at once by uploading a CSV file</mat-card-subtitle>
+            </mat-card-header>
+            
+            <mat-card-content>
+              <div class="upload-section">
+                <div class="upload-area">
+                  <input type="file" 
+                         #fileInput 
+                         accept=".csv" 
+                         (change)="onFileSelected($event)"
+                         style="display: none;">
+                  
+                  <div class="upload-prompt" (click)="fileInput.click()">
+                    <mat-icon class="upload-icon">cloud_upload</mat-icon>
+                    <h4>Select CSV File</h4>
+                    <p>Click to browse for a CSV file containing shift data</p>
+                  </div>
+                  
+                  <div class="file-info" *ngIf="csvFile">
+                    <mat-icon>description</mat-icon>
+                    <span>{{ csvFile.name }}</span>
+                    <span class="file-size">({{ csvShifts.length }} shifts)</span>
+                  </div>
+                </div>
+                
+                <div class="csv-actions">
+                  <button mat-raised-button 
+                          color="primary"
+                          (click)="testCsvShifts()"
+                          [disabled]="!selectedRuleId || csvShifts.length === 0 || isTesting">
+                    <mat-icon>play_arrow</mat-icon>
+                    Test All Shifts
+                  </button>
+                  
+                  <button mat-stroked-button 
+                          (click)="downloadCsvTemplate()">
+                    <mat-icon>download</mat-icon>
+                    Download Template
+                  </button>
+                  
+                  <button mat-stroked-button 
+                          (click)="clearCsvTest()"
+                          [disabled]="isTesting">
+                    <mat-icon>clear</mat-icon>
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <!-- CSV Format Instructions -->
+              <mat-expansion-panel class="format-instructions">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <mat-icon>help</mat-icon>
+                    CSV Format Instructions
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                
+                <div class="instructions-content">
+                  <p><strong>Required CSV format:</strong></p>
+                  <ul>
+                    <li><strong>Column 1:</strong> Employee Name</li>
+                    <li><strong>Column 2:</strong> Start DateTime (YYYY-MM-DDTHH:mm format)</li>
+                    <li><strong>Column 3:</strong> End DateTime (YYYY-MM-DDTHH:mm format)</li>
+                    <li><strong>Column 4:</strong> Organization ID (optional, defaults to 'demo-org')</li>
+                  </ul>
+                  <p><strong>Example:</strong></p>
+                  <div class="example-csv">
+                    <code>Employee Name,Start DateTime,End DateTime,Organization ID<br>
+                    John Doe,2024-01-15T09:00,2024-01-15T17:00,demo-org<br>
+                    Jane Smith,2024-01-15T08:30,2024-01-15T18:30,demo-org</code>
+                  </div>
+                </div>
+              </mat-expansion-panel>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- CSV Processing Progress -->
+          <div class="processing-section" *ngIf="isTesting && csvShifts.length > 0">
+            <mat-card>
+              <mat-card-content>
+                <div class="processing-content">
+                  <h4>Processing Shifts...</h4>
+                  <mat-progress-bar mode="determinate" [value]="csvProcessingProgress"></mat-progress-bar>
+                  <p>{{ csvProcessingProgress.toFixed(0) }}% complete ({{ csvResults.length }} of {{ csvShifts.length }} processed)</p>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+
+          <!-- CSV Results -->
+          <div class="csv-results-section" *ngIf="csvResults.length > 0">
+            <mat-card class="results-card">
+              <mat-card-header>
+                <mat-card-title>
+                  <mat-icon color="primary">assessment</mat-icon>
+                  Bulk Test Results
+                </mat-card-title>
+                <mat-card-subtitle>{{ csvResults.length }} shifts processed</mat-card-subtitle>
+                <button mat-icon-button 
+                        (click)="exportResults()"
+                        matTooltip="Export Results to CSV"
+                        class="export-button">
+                  <mat-icon>download</mat-icon>
+                </button>
+              </mat-card-header>
+              
+              <mat-card-content>
+                <div class="results-table-container">
+                  <mat-table [dataSource]="csvResults" class="bulk-results-table">
+                    <ng-container matColumnDef="employee">
+                      <mat-header-cell *matHeaderCellDef>Employee</mat-header-cell>
+                      <mat-cell *matCellDef="let result">
+                        <div class="employee-cell">
+                          <strong>{{ result.shift.employeeName }}</strong>
+                          <small>{{ getTotalHours(result.shift) | number:'1.1-1' }}h</small>
+                        </div>
+                      </mat-cell>
+                    </ng-container>
+                    
+                    <ng-container matColumnDef="shift">
+                      <mat-header-cell *matHeaderCellDef>Shift Period</mat-header-cell>
+                      <mat-cell *matCellDef="let result">
+                        <div class="shift-cell">
+                          <div>{{ formatDateTime(result.shift.startDateTime) }}</div>
+                          <div>{{ formatDateTime(result.shift.endDateTime) }}</div>
+                        </div>
+                      </mat-cell>
+                    </ng-container>
+                    
+                    <ng-container matColumnDef="payCode">
+                      <mat-header-cell *matHeaderCellDef>Pay Codes</mat-header-cell>
+                      <mat-cell *matCellDef="let result">
+                        <div class="pay-codes-cell" *ngIf="result.result && !result.processing">
+                          <mat-chip *ngFor="let allocation of result.result.payCodeAllocations" 
+                                   [color]="getPayCodeColor(allocation.payCodeName)"
+                                   class="pay-chip">
+                            {{ allocation.payCodeName }}
+                          </mat-chip>
+                        </div>
+                        <mat-spinner *ngIf="result.processing" diameter="20"></mat-spinner>
+                      </mat-cell>
+                    </ng-container>
+                    
+                    <ng-container matColumnDef="hours">
+                      <mat-header-cell *matHeaderCellDef>Hours Breakdown</mat-header-cell>
+                      <mat-cell *matCellDef="let result">
+                        <div class="hours-cell" *ngIf="result.result && !result.processing">
+                          <div *ngFor="let allocation of result.result.payCodeAllocations" class="hours-item">
+                            <span class="pay-type">{{ allocation.payCodeName }}:</span>
+                            <span class="hours-value">{{ allocation.hours | number:'1.1-1' }}h</span>
+                          </div>
+                        </div>
+                        <span *ngIf="result.processing" class="processing-text">Processing...</span>
+                      </mat-cell>
+                    </ng-container>
+
+                    <ng-container matColumnDef="description">
+                      <mat-header-cell *matHeaderCellDef>Details</mat-header-cell>
+                      <mat-cell *matCellDef="let result">
+                        <div class="description-cell" *ngIf="result.result && !result.processing">
+                          <div *ngFor="let allocation of result.result.payCodeAllocations" class="description-item">
+                            {{ allocation.description }}
+                          </div>
+                        </div>
+                      </mat-cell>
+                    </ng-container>
+
+                    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+                    <mat-row *matRowDef="let row; columns: displayedColumns;" 
+                             [class.processing-row]="row.processing"></mat-row>
+                  </mat-table>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>

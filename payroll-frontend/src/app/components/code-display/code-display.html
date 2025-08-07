@@ -1,0 +1,36 @@
+<div class="code-display-container">
+  <div class="code-header" *ngIf="showHeader">
+    <h4>{{ title }}</h4>
+    <div class="header-actions">
+      <button 
+        mat-icon-button 
+        matTooltip="Copy to clipboard"
+        (click)="copyCode()"
+        *ngIf="showCopyButton">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+      <button 
+        mat-icon-button 
+        matTooltip="Full screen"
+        (click)="toggleFullScreen()"
+        *ngIf="showFullScreenButton">
+        <mat-icon>{{ isFullScreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="code-wrapper" [class.full-screen]="isFullScreen">
+    <pre class="code-block language-{{ language }}"><code 
+      #codeElement 
+      class="language-{{ language }}"
+      [innerHTML]="highlightedCode">{{ code }}</code></pre>
+  </div>
+  
+  <div class="code-info" *ngIf="showInfo">
+    <mat-chip-listbox>
+      <mat-chip color="primary" *ngIf="language">{{ language.toUpperCase() }}</mat-chip>
+      <mat-chip *ngIf="lineCount">{{ lineCount }} lines</mat-chip>
+      <mat-chip *ngIf="characterCount">{{ characterCount }} chars</mat-chip>
+    </mat-chip-listbox>
+  </div>
+</div>

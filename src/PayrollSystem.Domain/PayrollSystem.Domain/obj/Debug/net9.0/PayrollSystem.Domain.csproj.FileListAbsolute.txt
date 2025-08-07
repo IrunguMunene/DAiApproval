@@ -1,0 +1,13 @@
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\bin\Debug\net9.0\PayrollSystem.Domain.deps.json
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\bin\Debug\net9.0\PayrollSystem.Domain.dll
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\bin\Debug\net9.0\PayrollSystem.Domain.pdb
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.csproj.AssemblyReference.cache
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.AssemblyInfoInputs.cache
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.AssemblyInfo.cs
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.csproj.CoreCompileInputs.cache
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.sourcelink.json
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.dll
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\refint\PayrollSystem.Domain.dll
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\PayrollSystem.Domain.pdb
+D:\Development\AI\DAiApproval\src\PayrollSystem.Domain\PayrollSystem.Domain\obj\Debug\net9.0\ref\PayrollSystem.Domain.dll

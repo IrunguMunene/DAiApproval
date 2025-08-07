@@ -1,0 +1,464 @@
+<div class="rule-management-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>rule</mat-icon>
+      Rule Management Dashboard
+    </h1>
+    <p class="page-subtitle">
+      View, manage, and control all your payroll rules in one place
+    </p>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon active">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ activeRules.length }}</h3>
+            <p>Active Rules</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon inactive">
+            <mat-icon>pause_circle</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ inactiveRules.length }}</h3>
+            <p>Inactive Rules</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon error">
+            <mat-icon>error</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ rulesWithErrors.length }}</h3>
+            <p>Compilation Errors</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-icon organization">
+            <mat-icon>business</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ selectedOrganization }}</h3>
+            <p>Current Org</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Controls Section -->
+  <div class="controls-section">
+    <mat-card>
+      <mat-card-content>
+        <div class="controls-header">
+          <div class="search-filter">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Search rules</mat-label>
+              <input matInput 
+                     [(ngModel)]="searchTerm" 
+                     (input)="filterRules()"
+                     placeholder="Search by name, description, or status">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Filter by Status</mat-label>
+              <mat-select [(value)]="statusFilter" (selectionChange)="filterRules()">
+                <mat-option value="all">All Rules</mat-option>
+                <mat-option value="active">Active Only</mat-option>
+                <mat-option value="inactive">Inactive Only</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="action-buttons">
+            <button mat-raised-button 
+                    color="primary" 
+                    routerLink="/rule-generation">
+              <mat-icon>add</mat-icon>
+              New Rule
+            </button>
+            
+            <button mat-stroked-button 
+                    (click)="refreshRules()"
+                    [disabled]="isLoading">
+              <mat-icon>refresh</mat-icon>
+              Refresh
+            </button>
+            
+            <button mat-stroked-button 
+                    [matMenuTriggerFor]="bulkMenu"
+                    [disabled]="selectedRules.length === 0">
+              <mat-icon>checklist</mat-icon>
+              Bulk Actions ({{ selectedRules.length }})
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-section" *ngIf="isLoading">
+    <mat-card>
+      <mat-card-content>
+        <div class="loading-content">
+          <mat-progress-spinner diameter="50" mode="indeterminate"></mat-progress-spinner>
+          <p>Loading rules...</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Tabs Section -->
+  <div class="tabs-section" *ngIf="!isLoading">
+    <mat-card>
+      <mat-tab-group [(selectedIndex)]="selectedTab" animationDuration="300ms">
+        <!-- All Rules Tab -->
+        <mat-tab label="All Rules">
+          <ng-template matTabLabel>
+            <mat-icon class="tab-icon">view_list</mat-icon>
+            All Rules ({{ allRules.length }})
+          </ng-template>
+          <div class="tab-content">
+            <div [ngSwitch]="selectedTab">
+              <div *ngSwitchCase="0" class="rules-content">
+                <ng-container *ngTemplateOutlet="rulesTableTemplate; context: { rules: filteredRules }"></ng-container>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Compilation Errors Tab -->
+        <mat-tab label="Compilation Errors">
+          <ng-template matTabLabel>
+            <mat-icon class="tab-icon">error</mat-icon>
+            Errors ({{ rulesWithErrors.length }})
+          </ng-template>
+          <div class="tab-content">
+            <div [ngSwitch]="selectedTab">
+              <div *ngSwitchCase="1" class="errors-content">
+                <ng-container *ngTemplateOutlet="compilationErrorsTemplate"></ng-container>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card>
+  </div>
+
+  <!-- Rules Table Template -->
+  <ng-template #rulesTableTemplate let-rules="rules">
+    <div class="rules-section">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>view_list</mat-icon>
+          Rules ({{ rules.length }})
+        </mat-card-title>
+        <mat-card-subtitle>
+          Manage your payroll rules and their activation status
+        </mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <div class="table-container">
+          <mat-table [dataSource]="rules" class="rules-table">
+            <!-- Selection Column -->
+            <ng-container matColumnDef="select">
+              <mat-header-cell *matHeaderCellDef>
+                <mat-checkbox (change)="$event ? masterToggle() : null"
+                             [checked]="selection.hasValue() && isAllSelected()"
+                             [indeterminate]="selection.hasValue() && !isAllSelected()">
+                </mat-checkbox>
+              </mat-header-cell>
+              <mat-cell *matCellDef="let row">
+                <mat-checkbox (click)="$event.stopPropagation()"
+                             (change)="$event ? selection.toggle(row) : null"
+                             [checked]="selection.isSelected(row)">
+                </mat-checkbox>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+              <mat-cell *matCellDef="let rule">
+                <mat-chip [color]="rule.isActive ? 'primary' : 'warn'" 
+                         [class.active-chip]="rule.isActive"
+                         [class.inactive-chip]="!rule.isActive">
+                  <mat-icon>{{ rule.isActive ? 'check_circle' : 'pause_circle' }}</mat-icon>
+                  {{ rule.isActive ? 'Active' : 'Inactive' }}
+                </mat-chip>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Rule Name Column -->
+            <ng-container matColumnDef="name">
+              <mat-header-cell *matHeaderCellDef>Rule</mat-header-cell>
+              <mat-cell *matCellDef="let rule">
+                <div class="rule-name-cell">
+                  <strong>{{ rule.ruleStatement }}</strong>
+                  <!-- <p class="rule-description">{{ rule.ruleDescription || 'No description provided' }}</p> -->
+                </div>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Created Date Column -->
+            <ng-container matColumnDef="created">
+              <mat-header-cell *matHeaderCellDef>Created</mat-header-cell>
+              <mat-cell *matCellDef="let rule">
+                <div class="date-cell">
+                  <span class="date">{{ formatDate(rule.createdAt) }}</span>
+                  <span class="author">by {{ rule.createdBy || 'System' }}</span>
+                </div>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Version Column -->
+            <ng-container matColumnDef="version">
+              <mat-header-cell *matHeaderCellDef>Version</mat-header-cell>
+              <mat-cell *matCellDef="let rule">
+                <mat-chip outline>v{{ rule.version }}</mat-chip>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+              <mat-cell *matCellDef="let rule">
+                <div class="action-buttons-cell">
+                  <button mat-icon-button 
+                          [color]="rule.isActive ? 'warn' : 'primary'"
+                          (click)="toggleRuleStatus(rule)"
+                          [disabled]="rule.isProcessing"
+                          [matTooltip]="rule.isActive ? 'Deactivate Rule' : 'Activate Rule'">
+                    <mat-icon>{{ rule.isActive ? 'pause' : 'play_arrow' }}</mat-icon>
+                  </button>
+
+                  <button mat-icon-button 
+                          color="primary"
+                          (click)="viewRuleCode(rule)"
+                          matTooltip="View Generated Code">
+                    <mat-icon>code</mat-icon>
+                  </button>
+
+                  <button mat-icon-button 
+                          [matMenuTriggerFor]="ruleMenu"
+                          [matMenuTriggerData]="{ rule: rule }">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                </div>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: displayedColumns;"
+                     [class.selected-row]="selection.isSelected(row)">
+            </mat-row>
+          </mat-table>
+
+          <!-- Empty State -->
+          <div class="empty-state" *ngIf="rules.length === 0">
+            <mat-icon class="empty-icon">rule_folder</mat-icon>
+            <h3>No Rules Found</h3>
+            <p>{{ searchTerm ? 'No rules match your search criteria.' : 'You haven\'t created any rules yet.' }}</p>
+            <button mat-raised-button color="primary" routerLink="/rule-generation">
+              <mat-icon>add</mat-icon>
+              Create Your First Rule
+            </button>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    </div>
+  </ng-template>
+
+  <!-- Compilation Errors Template -->
+  <ng-template #compilationErrorsTemplate>
+    <div class="compilation-errors-section">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>error</mat-icon>
+            Rules with Compilation Errors ({{ rulesWithErrors.length }})
+          </mat-card-title>
+          <mat-card-subtitle>
+            Rules that failed during code generation or compilation
+          </mat-card-subtitle>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <div class="errors-container">
+            <div class="error-item" *ngFor="let errorRule of rulesWithErrors">
+              <mat-expansion-panel class="error-panel rule-management-error-panel">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <mat-icon class="error-icon">error</mat-icon>
+                    <span class="rule-title">{{ errorRule.ruleDescription }}</span>
+                    <mat-chip class="status-chip error-chip">{{ errorRule.status }}</mat-chip>
+                  </mat-panel-title>
+                  <mat-panel-description>
+                    Created {{ formatDate(errorRule.createdAt) }} by {{ errorRule.createdBy }}
+                  </mat-panel-description>
+                </mat-expansion-panel-header>
+                
+                <div class="error-content">
+                  <!-- Rule Information -->
+                  <div class="rule-info-section">
+                    <h4>Rule Information</h4>
+                    <div class="info-grid">
+                      <div class="info-item">
+                        <strong>Description:</strong> {{ errorRule.ruleDescription }}
+                      </div>
+                      <div class="info-item">
+                        <strong>Status:</strong> {{ errorRule.status }}
+                      </div>
+                      <div class="info-item">
+                        <strong>Created:</strong> {{ formatDate(errorRule.createdAt) }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Compilation Errors -->
+                  <div class="compilation-errors-section">
+                    <h4>Compilation Errors</h4>
+                    <div class="error-messages" *ngIf="errorRule.compilationErrors && errorRule.compilationErrors.length > 0">
+                      <mat-card class="error-card" *ngFor="let error of errorRule.compilationErrors">
+                        <mat-card-content>
+                          <div class="error-message">
+                            <mat-icon class="error-icon">bug_report</mat-icon>
+                            <span>{{ error }}</span>
+                          </div>
+                        </mat-card-content>
+                      </mat-card>
+                    </div>
+                    <div class="no-errors" *ngIf="!errorRule.compilationErrors || errorRule.compilationErrors.length === 0">
+                      <p>No specific compilation errors recorded.</p>
+                    </div>
+                  </div>
+
+                  <!-- Generated Code -->
+                  <div class="generated-code-section" *ngIf="errorRule.generatedCode">
+                    <h4>Generated Code</h4>
+                    <app-code-display 
+                      [code]="errorRule.generatedCode"
+                      [title]="'Failed Rule Code'"
+                      [showHeader]="false"
+                      [showInfo]="false">
+                    </app-code-display>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="error-actions">
+                    <button mat-raised-button color="primary" (click)="regenerateRule(errorRule)">
+                      <mat-icon>refresh</mat-icon>
+                      Regenerate Rule
+                    </button>
+                    <button mat-stroked-button (click)="deleteErrorRule(errorRule)">
+                      <mat-icon>delete</mat-icon>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </mat-expansion-panel>
+            </div>
+
+            <!-- Empty State for Compilation Errors -->
+            <div class="empty-state" *ngIf="rulesWithErrors.length === 0">
+              <mat-icon class="empty-icon">check_circle</mat-icon>
+              <h3>No Compilation Errors</h3>
+              <p>All your rules have compiled successfully!</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </ng-template>
+
+  <!-- Code Viewer Dialog -->
+  <div class="code-viewer-section" *ngIf="selectedRuleForViewing">
+    <mat-card class="code-viewer-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>code</mat-icon>
+          Generated Code: {{ selectedRuleForViewing.ruleStatement }}
+        </mat-card-title>
+        <button mat-icon-button (click)="closeCodeViewer()" class="close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <app-code-display 
+          [code]="selectedRuleForViewing.generatedCode"
+          [title]="'Rule: ' + selectedRuleForViewing.ruleStatement"
+          [showHeader]="false"
+          [showInfo]="true">
+        </app-code-display>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+<!-- Bulk Actions Menu -->
+<mat-menu #bulkMenu="matMenu">
+  <button mat-menu-item (click)="bulkActivate()">
+    <mat-icon>play_arrow</mat-icon>
+    <span>Activate Selected</span>
+  </button>
+  <button mat-menu-item (click)="bulkDeactivate()">
+    <mat-icon>pause</mat-icon>
+    <span>Deactivate Selected</span>
+  </button>
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="exportSelected()">
+    <mat-icon>download</mat-icon>
+    <span>Export Selected</span>
+  </button>
+</mat-menu>
+
+<!-- Individual Rule Menu -->
+<mat-menu #ruleMenu="matMenu">
+  <ng-template matMenuContent let-rule="rule">
+    <button mat-menu-item (click)="testRule(rule)">
+      <mat-icon>play_arrow</mat-icon>
+      <span>Test Rule</span>
+    </button>
+    <button mat-menu-item (click)="duplicateRule(rule)">
+      <mat-icon>content_copy</mat-icon>
+      <span>Duplicate Rule</span>
+    </button>
+    <button mat-menu-item (click)="exportRule(rule)">
+      <mat-icon>download</mat-icon>
+      <span>Export Rule</span>
+    </button>
+    <mat-divider></mat-divider>
+    <button mat-menu-item (click)="deleteRule(rule)" class="warn-menu-item">
+      <mat-icon>delete</mat-icon>
+      <span>Delete Rule</span>
+    </button>
+  </ng-template>
+</mat-menu>

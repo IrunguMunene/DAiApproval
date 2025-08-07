@@ -1,0 +1,782 @@
+.rule-testing-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+  
+  h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    font-size: 2.5rem;
+    color: #333;
+    margin-bottom: 16px;
+    
+    mat-icon {
+      font-size: 2.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      color: #1976d2;
+    }
+  }
+  
+  .page-subtitle {
+    font-size: 1.2rem;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+}
+
+// Rule Selection Section
+.rule-selection-section {
+  margin-bottom: 32px;
+  
+  .loading-rules {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    justify-content: center;
+    color: #666;
+  }
+  
+  .rule-selector {
+    width: 100%;
+    
+    .rule-option {
+      strong {
+        display: block;
+        font-size: 1rem;
+        color: #333;
+        margin-bottom: 4px;
+      }
+      
+      .rule-meta {
+        font-size: 0.875rem;
+        color: #666;
+        font-style: italic;
+      }
+    }
+  }
+}
+
+// Testing Methods Section
+.testing-methods-section {
+  .testing-tabs {
+    .mat-mdc-tab-body-wrapper {
+      margin-top: 24px;
+    }
+  }
+  
+  .tab-content {
+    margin-top: 24px;
+  }
+}
+
+// Manual Testing Form
+.manual-testing-card {
+  margin-bottom: 32px;
+  
+  .form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 16px;
+    
+    &:last-of-type {
+      margin-bottom: 24px;
+    }
+    
+    .full-width {
+      flex: 1;
+      width: 100%;
+    }
+    
+    .half-width {
+      flex: 1;
+      min-width: 200px;
+    }
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: flex-start;
+    
+    button {
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+// Test Results Section
+.test-results-section {
+  margin-top: 32px;
+  
+  .results-card {
+    .shift-summary {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+      
+      .summary-item {
+        margin-bottom: 8px;
+        font-size: 1rem;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        strong {
+          color: #333;
+          margin-right: 8px;
+        }
+      }
+    }
+    
+    .results-table {
+      width: 100%;
+      
+      mat-header-cell {
+        font-weight: 600;
+        color: #333;
+      }
+      
+      mat-chip {
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// CSV Upload Section
+.csv-upload-card {
+  margin-bottom: 32px;
+  
+  .upload-section {
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      
+      &:hover {
+        border-color: #1976d2;
+        background-color: #f8f9fa;
+      }
+      
+      .upload-prompt {
+        .upload-icon {
+          font-size: 4rem;
+          width: 4rem;
+          height: 4rem;
+          color: #1976d2;
+          margin-bottom: 16px;
+        }
+        
+        h4 {
+          color: #333;
+          margin-bottom: 8px;
+          font-size: 1.3rem;
+        }
+        
+        p {
+          color: #666;
+          margin: 0;
+          font-size: 1rem;
+        }
+      }
+      
+      .file-info {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: #e8f5e8;
+        border-radius: 8px;
+        padding: 16px;
+        color: #2e7d32;
+        font-weight: 500;
+        
+        mat-icon {
+          color: #2e7d32;
+        }
+        
+        .file-size {
+          font-size: 0.875rem;
+          opacity: 0.8;
+        }
+      }
+    }
+    
+    .csv-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      
+      button {
+        mat-icon {
+          margin-right: 8px;
+        }
+      }
+    }
+  }
+  
+  .format-instructions {
+    margin-top: 24px;
+    
+    .instructions-content {
+      ul {
+        margin: 16px 0;
+        padding-left: 24px;
+        
+        li {
+          margin-bottom: 8px;
+          line-height: 1.5;
+          
+          strong {
+            color: #333;
+          }
+        }
+      }
+      
+      .example-csv {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+        
+        code {
+          font-family: 'Courier New', monospace;
+          font-size: 0.9rem;
+          line-height: 1.6;
+          color: #333;
+          white-space: pre;
+        }
+      }
+    }
+  }
+}
+
+// CSV Processing Section
+.processing-section {
+  margin: 32px 0;
+  
+  .processing-content {
+    text-align: center;
+    padding: 30px;
+    
+    h4 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.3rem;
+    }
+    
+    mat-progress-bar {
+      margin-bottom: 16px;
+      height: 8px;
+      border-radius: 4px;
+    }
+    
+    p {
+      color: #666;
+      margin: 0;
+      font-size: 1rem;
+    }
+  }
+}
+
+// CSV Results Section
+.csv-results-section {
+  margin-top: 32px;
+  
+  .results-card {
+    mat-card-header {
+      position: relative;
+      
+      .export-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        color: #1976d2;
+      }
+    }
+    
+    .results-table-container {
+      overflow-x: auto;
+      
+      .bulk-results-table {
+        width: 100%;
+        min-width: 900px;
+        
+        // Header styling
+        mat-header-cell {
+          font-weight: 600;
+          color: #333;
+          font-size: 0.95rem;
+        }
+        
+        // Cell styling
+        mat-cell {
+          color: #555;
+          vertical-align: top;
+          padding: 12px 8px;
+          
+          .employee-cell {
+            strong {
+              display: block;
+              color: #333;
+              font-weight: 600;
+              margin-bottom: 4px;
+            }
+            
+            small {
+              color: #666;
+              font-size: 0.875rem;
+            }
+          }
+          
+          .shift-cell {
+            div {
+              font-size: 0.9rem;
+              line-height: 1.4;
+              
+              &:first-child {
+                font-weight: 500;
+                color: #333;
+              }
+              
+              &:last-child {
+                color: #666;
+                margin-top: 2px;
+              }
+            }
+          }
+          
+          .pay-codes-cell {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            
+            .pay-chip {
+              font-size: 0.8rem;
+              height: 28px;
+              line-height: 28px;
+            }
+          }
+          
+          .hours-cell {
+            .hours-item {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 4px;
+              font-size: 0.9rem;
+              
+              &:last-child {
+                margin-bottom: 0;
+              }
+              
+              .pay-type {
+                color: #666;
+                font-weight: 500;
+              }
+              
+              .hours-value {
+                color: #333;
+                font-weight: 600;
+              }
+            }
+          }
+          
+          .description-cell {
+            .description-item {
+              font-size: 0.875rem;
+              color: #666;
+              line-height: 1.4;
+              margin-bottom: 4px;
+              
+              &:last-child {
+                margin-bottom: 0;
+              }
+            }
+          }
+          
+          .processing-text {
+            color: #1976d2;
+            font-style: italic;
+            font-size: 0.9rem;
+          }
+        }
+        
+        // Row styling
+        mat-row {
+          transition: background-color 0.2s ease;
+          
+          &:hover {
+            background-color: #f8f9fa;
+          }
+          
+          &.processing-row {
+            background-color: #fff3e0;
+            
+            &:hover {
+              background-color: #ffe0b2;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Global snackbar styling
+:host ::ng-deep {
+  .success-snackbar {
+    --mdc-snackbar-container-color: #4caf50;
+    --mdc-snackbar-supporting-text-color: white;
+  }
+  
+  .warning-snackbar {
+    --mdc-snackbar-container-color: #ff9800;
+    --mdc-snackbar-supporting-text-color: white;
+  }
+  
+  .error-snackbar {
+    --mdc-snackbar-container-color: #f44336;
+    --mdc-snackbar-supporting-text-color: white;
+  }
+}
+
+// Mobile responsive design
+@media (max-width: 768px) {
+  .rule-testing-container {
+    padding: 15px;
+  }
+  
+  .page-header h1 {
+    font-size: 2rem;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .page-header .page-subtitle {
+    font-size: 1rem;
+  }
+  
+  .manual-testing-card {
+    .form-row {
+      flex-direction: column;
+      gap: 0;
+      
+      .half-width,
+      .full-width {
+        width: 100%;
+        min-width: auto;
+      }
+    }
+    
+    .form-actions {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+  
+  .csv-upload-card {
+    .upload-section {
+      .upload-area {
+        padding: 30px 20px;
+        
+        .upload-prompt {
+          .upload-icon {
+            font-size: 3rem;
+            width: 3rem;
+            height: 3rem;
+          }
+          
+          h4 {
+            font-size: 1.1rem;
+          }
+        }
+      }
+      
+      .csv-actions {
+        flex-direction: column;
+        
+        button {
+          width: 100%;
+        }
+      }
+    }
+  }
+  
+  .csv-results-section {
+    .results-card {
+      .results-table-container {
+        .bulk-results-table {
+          min-width: 600px;
+          
+          mat-cell {
+            padding: 8px 4px;
+            font-size: 0.85rem;
+            
+            .employee-cell strong {
+              font-size: 0.9rem;
+            }
+            
+            .shift-cell div {
+              font-size: 0.8rem;
+            }
+            
+            .pay-codes-cell .pay-chip {
+              font-size: 0.75rem;
+              height: 24px;
+              line-height: 24px;
+            }
+            
+            .hours-cell .hours-item {
+              font-size: 0.8rem;
+            }
+            
+            .description-cell .description-item {
+              font-size: 0.8rem;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .rule-testing-container {
+    padding: 10px;
+  }
+  
+  .csv-upload-card {
+    .upload-section .upload-area {
+      padding: 20px 15px;
+    }
+  }
+  
+  .processing-section .processing-content {
+    padding: 20px 15px;
+  }
+}
+
+// Testing Mode Selection
+.testing-mode-selection {
+  .testing-mode-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    
+    .testing-mode-option {
+      .mode-content {
+        margin-left: 12px;
+        
+        .mode-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 4px;
+          
+          mat-icon {
+            color: #1976d2;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+          
+          strong {
+            font-size: 1.1rem;
+            color: #333;
+          }
+        }
+        
+        .mode-description {
+          color: #666;
+          font-size: 0.95rem;
+          line-height: 1.4;
+        }
+      }
+    }
+  }
+}
+
+.all-rules-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background-color: #e3f2fd;
+  border-radius: 8px;
+  color: #1976d2;
+  font-weight: 500;
+  
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Orchestration Results
+.orchestration-results-section {
+  margin-top: 32px;
+  
+  .orchestration-summary-card {
+    margin-bottom: 24px;
+    
+    .orchestration-summary {
+      .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+        
+        .stat-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          border-radius: 12px;
+          border: 1px solid #e1e5e9;
+          
+          &.warning {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-color: #ffcc80;
+          }
+          
+          mat-icon {
+            font-size: 28px;
+            width: 28px;
+            height: 28px;
+          }
+          
+          .stat-content {
+            .stat-value {
+              font-size: 1.5rem;
+              font-weight: 600;
+              color: #333;
+              line-height: 1;
+            }
+            
+            .stat-label {
+              font-size: 0.875rem;
+              color: #666;
+              margin-top: 2px;
+            }
+          }
+        }
+      }
+    }
+    
+    .conflict-indicator {
+      margin-left: 8px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+  
+  .conflicts-card {
+    margin-bottom: 24px;
+    .conflict-panel {
+      margin-bottom: 8px;
+      border: 1px solid #ffcc80;
+      .mat-expansion-panel-header {
+        background: #fff3e0;
+        .conflict-summary {
+          margin-left: 12px;
+          color: #e65100;
+          font-weight: 500;
+        }
+      }
+      .conflict-details {
+        padding: 16px;
+        mat-table mat-header-cell { font-weight: 600; color: #333; }
+      }
+    }
+  }
+  
+  .individual-results-card {
+    margin-bottom: 24px;
+    .individual-rules-accordion .mat-expansion-panel {
+      margin-bottom: 8px;
+      border: 1px solid #e1e5e9;
+      .mat-expansion-panel-header {
+        .rule-title { margin-left: 12px; font-weight: 500; color: #333; }
+        .success-text { color: #4caf50; font-weight: 500; }
+        .error-text { color: #f44336; font-weight: 500; }
+      }
+      .rule-result-details {
+        padding: 16px;
+        mat-table { width: 100%; }
+        mat-header-cell { font-weight: 600; color: #333; }
+      }
+    }
+  }
+  
+  .final-result-card {
+    border: 2px solid #4caf50;
+    
+    .final-results-table {
+      mat-header-cell {
+        font-weight: 600;
+        color: #333;
+        font-size: 1rem;
+      }
+      
+      mat-cell {
+        &.hours-cell {
+          font-size: 1.1rem;
+        }
+        
+        .large-chip {
+          font-size: 0.9rem;
+          height: 32px;
+          line-height: 32px;
+        }
+      }
+    }
+  }
+}
+
+// Mobile responsive for orchestration
+@media (max-width: 768px) {
+  .orchestration-results-section .orchestration-summary-card .summary-stats {
+    grid-template-columns: 1fr;
+    
+    .stat-card {
+      padding: 12px;
+      .stat-content .stat-value { font-size: 1.25rem; }
+    }
+  }
+  
+  .testing-mode-selection .testing-mode-group {
+    gap: 12px;
+    .testing-mode-option .mode-content {
+      .mode-header strong { font-size: 1rem; }
+      .mode-description { font-size: 0.875rem; }
+    }
+  }
+}

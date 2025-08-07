@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "C/b1FgW+Z2U=",
+  "success": true,
+  "projectFilePath": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Domain\\PayrollSystem.Domain\\PayrollSystem.Domain.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ADMIN\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\9.0.7\\microsoft.entityframeworkcore.abstractions.9.0.7.nupkg.sha512"
+  ],
+  "logs": []
+}

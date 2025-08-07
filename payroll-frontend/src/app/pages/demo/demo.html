@@ -1,0 +1,63 @@
+<div class="demo-container">
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <mat-card class="hero-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="hero-icon">smart_toy</mat-icon>
+        <mat-card-title>AI-Orchestrated Payroll System</mat-card-title>
+        <mat-card-subtitle>Generate payroll rules from natural language descriptions</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="hero-description">
+          Experience the future of payroll processing! This system uses AI to automatically generate 
+          C# functions from simple English descriptions of payroll rules, compiles them at runtime, 
+          and hot-plugs them into the execution environment.
+        </p>
+        <div class="stats-row">
+          <div class="stat">
+            <h3>⚡ Real-time</h3>
+            <p>Rule Generation</p>
+          </div>
+          <div class="stat">
+            <h3>🔥 Hot-Plugging</h3>
+            <p>C# Functions</p>
+          </div>
+          <div class="stat">
+            <h3>🤖 AI-Powered</h3>
+            <p>Code Generation</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions" *ngIf="!demoStarted">
+    <h2>Quick Actions</h2>
+    <div class="action-grid">
+      <mat-card class="action-card" routerLink="/rule-generation">
+        <mat-card-header>
+          <mat-icon mat-card-avatar color="primary">auto_fix_high</mat-icon>
+          <mat-card-title>Generate New Rule</mat-card-title>
+          <mat-card-subtitle>Create payroll rules with AI</mat-card-subtitle>
+        </mat-card-header>
+      </mat-card>
+
+      <mat-card class="action-card" routerLink="/rule-management">
+        <mat-card-header>
+          <mat-icon mat-card-avatar color="accent">rule</mat-icon>
+          <mat-card-title>Manage Rules</mat-card-title>
+          <mat-card-subtitle>View and control active rules</mat-card-subtitle>
+        </mat-card-header>
+      </mat-card>
+
+      <mat-card class="action-card" routerLink="/rule-testing">
+        <mat-card-header>
+          <mat-icon mat-card-avatar color="warn">fact_check</mat-icon>
+          <mat-card-title>Test Rules</mat-card-title>
+          <mat-card-subtitle>Validate payroll calculations</mat-card-subtitle>
+        </mat-card-header>
+      </mat-card>
+    </div>
+  </div>
+</div>
