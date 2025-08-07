@@ -49,6 +49,10 @@ export class RuleManagement implements OnInit {
     return this.allRules.filter(rule => !rule.isActive);
   }
 
+  get rulesRequiringManualReview(): RuleGenerationResponse[] {
+    return this.rulesWithErrors.filter(rule => rule.requiresManualReview);
+  }
+
 
   get selectedRules(): PayRule[] {
     return this.selection.selected;
@@ -84,8 +88,7 @@ export class RuleManagement implements OnInit {
       },
       error: (error) => {
         console.error('Error loading rules with compilation errors:', error);
-        // Generate mock data for demonstration
-        this.rulesWithErrors = this.generateMockErrorRules();
+        this.rulesWithErrors = [];
       }
     });
   }
@@ -389,30 +392,7 @@ export class RuleManagement implements OnInit {
     });
   }
 
-  // Error rule handling
-  regenerateRule(errorRule: RuleGenerationResponse) {
-    this.router.navigate(['/rule-generation'], {
-      queryParams: {
-        regenerate: errorRule.id,
-        statement: errorRule.ruleStatement,
-        description: errorRule.ruleDescription
-      }
-    });
-  }
-
-  deleteErrorRule(errorRule: RuleGenerationResponse) {
-    const confirmed = confirm(`Are you sure you want to delete the failed rule "${errorRule.ruleDescription}"? This action cannot be undone.`);
-    
-    if (confirmed) {
-      // Remove from local array since backend might not have delete endpoint yet
-      this.rulesWithErrors = this.rulesWithErrors.filter(r => r.id !== errorRule.id);
-      
-      this.snackBar.open('Error rule deleted successfully', 'Close', { 
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
-    }
-  }
+  // Error rule handling methods are implemented below in auto-fix section
 
   // Utility methods
   formatDate(dateString: string): string {
@@ -683,82 +663,77 @@ export class RuleManagement implements OnInit {
     return codeTemplates[type as keyof typeof codeTemplates] || codeTemplates.overtime;
   }
 
-  private generateMockErrorRules(): RuleGenerationResponse[] {
-    return [
-      {
-        id: 'error-1',
-        ruleStatement: 'Complex overtime with multiple conditions',
-        ruleDescription: 'Overtime after 8 hours daily and 40 hours weekly with different rates',
-        intent: 'Calculate overtime with complex conditions including daily and weekly limits',
-        generatedCode: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    // This code has compilation errors intentionally
-    var totalHours = shift.InvalidProperty; // Error: property doesn't exist
-    var result = new InvalidType(); // Error: type doesn't exist
+  // Auto-fix related methods
+  regenerateRule(rule: RuleGenerationResponse) {
+    const confirmed = confirm(
+      `Are you sure you want to regenerate the rule "${rule.ruleDescription}"? ` +
+      'This will create a new version of the rule using AI.'
+    );
     
-    return result;
-}`,
-        status: 'CompilationFailed',
-        compilationErrors: [
-          "CS0117: 'Shift' does not contain a definition for 'InvalidProperty'",
-          "CS0246: The type or namespace name 'InvalidType' could not be found"
-        ],
-        createdAt: '2024-01-18T15:30:00Z',
-        createdBy: 'AI System'
-      },
-      {
-        id: 'error-2',
-        ruleStatement: 'Holiday pay with federal calendar integration',
-        ruleDescription: 'Automatic federal holiday detection with 2.5x rate',
-        intent: 'Integrate with federal holiday calendar and apply premium rates',
-        generatedCode: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    var holidayService = new HolidayService(); // Error: service not available
-    var isHoliday = holidayService.CheckFederalHoliday(shift.StartDateTime);
-    
-    // Missing return statement
-}`,
-        status: 'CompilationFailed',
-        compilationErrors: [
-          "CS0246: The type or namespace name 'HolidayService' could not be found",
-          "CS0161: Not all code paths return a value"
-        ],
-        createdAt: '2024-01-17T09:15:00Z',
-        createdBy: 'AI System'
-      },
-      {
-        id: 'error-3',
-        ruleStatement: 'Union contract compliance with break deductions',
-        ruleDescription: 'Apply union contract rules with automatic break time deductions',
-        intent: 'Implement union contract compliance with break calculations',
-        generatedCode: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    var totalHours = (shift.EndDateTime - shift.StartDateTime).TotalHours;
-    var breakTime = CalculateBreakTime(totalHours); // Error: method doesn't exist
-    
-    return new ShiftClassificationResult
-    {
-        EmployeeName = shift.EmployeeName,
-        ShiftStart = shift.StartDateTime,
-        ShiftEnd = shift.EndDateTime,
-        PayCodeAllocations = new List<PayCodeAllocation>
-        {
-            new PayCodeAllocation
-            {
-                PayCodeName = "Regular",
-                Hours = totalHours - breakTime,
-                Description = "Regular hours minus break time"
-            }
+    if (confirmed) {
+      this.apiService.regenerateRule(rule.id).subscribe({
+        next: () => {
+          this.snackBar.open('Rule regeneration initiated successfully', 'Close', { 
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+          // Refresh the rules to see the updated status
+          this.loadRulesWithErrors();
+        },
+        error: (error) => {
+          this.snackBar.open(`Error regenerating rule: ${error.message}`, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
         }
-    };
-}`,
-        status: 'ActivationFailed',
-        compilationErrors: [
-          "CS0103: The name 'CalculateBreakTime' does not exist in the current context"
-        ],
-        createdAt: '2024-01-16T13:45:00Z',
-        createdBy: 'AI System'
-      }
-    ];
+      });
+    }
   }
+
+  deleteErrorRule(rule: RuleGenerationResponse) {
+    const confirmed = confirm(
+      `Are you sure you want to delete the failed rule "${rule.ruleDescription}"? ` +
+      'This action cannot be undone.'
+    );
+    
+    if (confirmed) {
+      this.apiService.deleteRule(rule.id).subscribe({
+        next: () => {
+          this.rulesWithErrors = this.rulesWithErrors.filter(r => r.id !== rule.id);
+          this.snackBar.open('Failed rule deleted successfully', 'Close', { 
+            duration: 3000,
+            panelClass: ['warning-snackbar']
+          });
+        },
+        error: (error) => {
+          this.snackBar.open(`Error deleting rule: ${error.message}`, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  getStatusChipClass(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return 'status-chip active-chip';
+      case 'failed':
+      case 'compilationfailed':
+      case 'activationfailed':
+        return 'status-chip error-chip';
+      case 'autofixing':
+        return 'status-chip auto-fixing-chip';
+      case 'requiresmanualreview':
+        return 'status-chip manual-review-chip';
+      case 'codegenerated':
+        return 'status-chip generated-chip';
+      case 'pending':
+        return 'status-chip pending-chip';
+      default:
+        return 'status-chip default-chip';
+    }
+  }
+
 }

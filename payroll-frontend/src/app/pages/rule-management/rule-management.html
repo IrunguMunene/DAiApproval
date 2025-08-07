@@ -56,6 +56,20 @@
     <mat-card class="stat-card">
       <mat-card-content>
         <div class="stat-content">
+          <div class="stat-icon manual-review">
+            <mat-icon>assignment_late</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ rulesRequiringManualReview.length }}</h3>
+            <p>Manual Review</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
           <div class="stat-icon organization">
             <mat-icon>business</mat-icon>
           </div>
@@ -334,10 +348,128 @@
                         <strong>Description:</strong> {{ errorRule.ruleDescription }}
                       </div>
                       <div class="info-item">
-                        <strong>Status:</strong> {{ errorRule.status }}
+                        <strong>Status:</strong> 
+                        <mat-chip [class]="getStatusChipClass(errorRule.status)">
+                          {{ errorRule.status }}
+                        </mat-chip>
                       </div>
                       <div class="info-item">
                         <strong>Created:</strong> {{ formatDate(errorRule.createdAt) }}
+                      </div>
+                      <div class="info-item">
+                        <strong>Last Modified:</strong> {{ formatDate(errorRule.lastModified) }}
+                      </div>
+                      <div class="info-item">
+                        <strong>Generation Attempts:</strong> {{ errorRule.generationAttemptCount }}
+                      </div>
+                      <div class="info-item" *ngIf="errorRule.createdBy">
+                        <strong>Created By:</strong> {{ errorRule.createdBy }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Auto-Fix Information -->
+                  <div class="auto-fix-section" *ngIf="errorRule.autoFixAttempted || errorRule.requiresManualReview">
+                    <h4>
+                      <mat-icon [class]="errorRule.requiresManualReview ? 'manual-review-icon' : 'auto-fix-icon'">
+                        {{ errorRule.requiresManualReview ? 'assignment_late' : 'auto_fix_high' }}
+                      </mat-icon>
+                      Auto-Fix Information
+                    </h4>
+                    
+                    <div class="auto-fix-content">
+                      <div class="auto-fix-status" *ngIf="errorRule.requiresManualReview">
+                        <mat-card class="manual-review-card">
+                          <mat-card-content>
+                            <div class="manual-review-header">
+                              <mat-icon class="warning-icon">warning</mat-icon>
+                              <span class="manual-review-title">Manual Review Required</span>
+                            </div>
+                            <p class="manual-review-message">
+                              This rule requires manual developer review due to auto-fix limitations.
+                            </p>
+                          </mat-card-content>
+                        </mat-card>
+                      </div>
+
+                      <div class="auto-fix-details" *ngIf="errorRule.autoFixAttempted">
+                        <div class="auto-fix-grid">
+                          <div class="auto-fix-item">
+                            <strong>Auto-Fix Attempted:</strong>
+                            <mat-chip class="auto-fix-chip attempted">
+                              <mat-icon>check</mat-icon>
+                              Yes
+                            </mat-chip>
+                          </div>
+                          <div class="auto-fix-item" *ngIf="errorRule.autoFixAttemptedAt">
+                            <strong>Auto-Fix Date:</strong>
+                            {{ formatDate(errorRule.autoFixAttemptedAt) }}
+                          </div>
+                          <div class="auto-fix-item" *ngIf="errorRule.autoFixReason">
+                            <strong>Auto-Fix Reason:</strong>
+                            <span class="auto-fix-reason">{{ errorRule.autoFixReason }}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Original vs Fixed Code Comparison -->
+                      <div class="code-comparison" *ngIf="errorRule.originalGeneratedCode && errorRule.autoFixAttempted">
+                        <h5>Code Comparison</h5>
+                        
+                        <mat-tab-group class="code-comparison-tabs">
+                          <mat-tab label="Original Code (Failed)">
+                            <div class="code-tab-content">
+                              <app-code-display 
+                                [code]="errorRule.originalGeneratedCode"
+                                [title]="'Original Generated Code'"
+                                [showHeader]="false"
+                                [showInfo]="false">
+                              </app-code-display>
+                            </div>
+                          </mat-tab>
+                          
+                          <mat-tab label="Auto-Fixed Code">
+                            <div class="code-tab-content">
+                              <app-code-display 
+                                [code]="errorRule.generatedCode"
+                                [title]="'Auto-Fixed Code'"
+                                [showHeader]="false"
+                                [showInfo]="false">
+                              </app-code-display>
+                            </div>
+                          </mat-tab>
+                        </mat-tab-group>
+                      </div>
+
+                      <!-- Original Errors vs Current Errors -->
+                      <div class="error-comparison" *ngIf="errorRule.originalCompilationErrors && errorRule.autoFixAttempted">
+                        <h5>Error History</h5>
+                        
+                        <div class="error-history-grid">
+                          <div class="original-errors">
+                            <h6>Original Compilation Errors:</h6>
+                            <mat-card class="error-history-card original">
+                              <mat-card-content>
+                                <div class="error-message">
+                                  <mat-icon class="error-icon">bug_report</mat-icon>
+                                  <span>{{ errorRule.originalCompilationErrors }}</span>
+                                </div>
+                              </mat-card-content>
+                            </mat-card>
+                          </div>
+                          
+                          <div class="current-errors" *ngIf="errorRule.compilationErrors && errorRule.compilationErrors.length > 0">
+                            <h6>Current Compilation Errors:</h6>
+                            <mat-card class="error-history-card current" *ngFor="let error of errorRule.compilationErrors">
+                              <mat-card-content>
+                                <div class="error-message">
+                                  <mat-icon class="error-icon">bug_report</mat-icon>
+                                  <span>{{ error }}</span>
+                                </div>
+                              </mat-card-content>
+                            </mat-card>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

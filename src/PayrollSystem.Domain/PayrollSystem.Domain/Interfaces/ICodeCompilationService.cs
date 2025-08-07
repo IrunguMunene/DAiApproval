@@ -22,4 +22,19 @@ public class CompilationResult
     public byte[]? CompiledAssembly { get; set; }
     public List<string> Errors { get; set; } = new();
     public List<string> Warnings { get; set; } = new();
+    
+    // Enhanced error analysis for auto-fix
+    public List<CompilationError> DetailedErrors { get; set; } = new();
+    public bool IsAutoFixable { get; set; } = false;
+    public string? GeneratedFullCode { get; set; } // For debugging
+}
+
+public class CompilationError
+{
+    public string Code { get; set; } = string.Empty; // Error code like CS0103
+    public string Message { get; set; } = string.Empty;
+    public int LineNumber { get; set; }
+    public string Severity { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty; // NameResolution, TypeConversion, etc.
+    public bool AutoFixable { get; set; } = false;
 }

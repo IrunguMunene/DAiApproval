@@ -10,17 +10,20 @@ public class RuleManagementService : IRuleManagementService
     private readonly IPayRuleRepository _payRuleRepository;
     private readonly IRuleGenerationService _ruleGenerationService;
     private readonly ICodeCompilationService _compilationService;
+    private readonly ICodeFixingPromptService _codeFixingPromptService;
 
     public RuleManagementService(
         IRuleGenerationRepository generationRepository,
         IPayRuleRepository payRuleRepository,
         IRuleGenerationService ruleGenerationService,
-        ICodeCompilationService compilationService)
+        ICodeCompilationService compilationService,
+        ICodeFixingPromptService codeFixingPromptService)
     {
         _generationRepository = generationRepository;
         _payRuleRepository = payRuleRepository;
         _ruleGenerationService = ruleGenerationService;
         _compilationService = compilationService;
+        _codeFixingPromptService = codeFixingPromptService;
     }
 
     public async Task<RuleGenerationResponseDto> GenerateRuleAsync(RuleGenerationRequestDto request, string createdBy)
@@ -72,11 +75,38 @@ public class RuleManagementService : IRuleManagementService
 
             if (!compilationResult.Success)
             {
-                generationRequest.Status = "CompilationFailed";
-                generationRequest.CompilationErrors = string.Join("; ", compilationResult.Errors);
-                await _generationRepository.UpdateAsync(generationRequest);
-                await _generationRepository.SaveChangesAsync();
-                return false;
+                // Check if we should attempt auto-fix
+                if (compilationResult.IsAutoFixable && !generationRequest.AutoFixAttempted && generationRequest.GenerationAttemptCount == 1)
+                {
+                    generationRequest.Status = "AutoFixing";
+                    generationRequest.LastModified = DateTime.UtcNow;
+                    await _generationRepository.UpdateAsync(generationRequest);
+                    await _generationRepository.SaveChangesAsync();
+
+                    // Attempt auto-fix
+                    var autoFixResult = await AttemptAutoFixAsync(generationRequest, compilationResult.Errors);
+                    return autoFixResult;
+                }
+                else
+                {
+                    // Set status based on auto-fix history
+                    if (generationRequest.AutoFixAttempted)
+                    {
+                        generationRequest.Status = "RequiresManualReview";
+                        generationRequest.RequiresManualReview = true;
+                        generationRequest.AutoFixReason = "Auto-fix attempted but compilation still failed";
+                    }
+                    else
+                    {
+                        generationRequest.Status = "CompilationFailed";
+                    }
+
+                    generationRequest.CompilationErrors = string.Join("; ", compilationResult.Errors);
+                    generationRequest.LastModified = DateTime.UtcNow;
+                    await _generationRepository.UpdateAsync(generationRequest);
+                    await _generationRepository.SaveChangesAsync();
+                    return false;
+                }
             }
 
             // Load the compiled function
@@ -174,7 +204,154 @@ public class RuleManagementService : IRuleManagementService
             CompilationErrors = string.IsNullOrEmpty(generationRequest.CompilationErrors) 
                 ? new List<string>() 
                 : generationRequest.CompilationErrors.Split(new[] { "; " }, StringSplitOptions.RemoveEmptyEntries).ToList(),
-            CreatedAt = generationRequest.CreatedAt
+            CreatedAt = generationRequest.CreatedAt,
+            CreatedBy = generationRequest.CreatedBy,
+            GenerationAttemptCount = generationRequest.GenerationAttemptCount,
+            AutoFixAttempted = generationRequest.AutoFixAttempted,
+            OriginalGeneratedCode = generationRequest.OriginalGeneratedCode,
+            OriginalCompilationErrors = generationRequest.OriginalCompilationErrors,
+            AutoFixAttemptedAt = generationRequest.AutoFixAttemptedAt,
+            RequiresManualReview = generationRequest.RequiresManualReview,
+            AutoFixReason = generationRequest.AutoFixReason,
+            LastModified = generationRequest.LastModified
         };
+    }
+
+    private async Task<bool> AttemptAutoFixAsync(RuleGenerationRequest generationRequest, List<string> compilationErrors)
+    {
+        try
+        {
+            // Store original code and errors
+            generationRequest.OriginalGeneratedCode = generationRequest.GeneratedCode;
+            generationRequest.OriginalCompilationErrors = string.Join("; ", compilationErrors);
+            generationRequest.AutoFixAttemptedAt = DateTime.UtcNow;
+            generationRequest.AutoFixAttempted = true;
+            generationRequest.GenerationAttemptCount++;
+            generationRequest.AutoFixReason = $"Compilation failed with {compilationErrors.Count} error(s): " + 
+                                              string.Join(", ", compilationErrors.Take(3));
+
+            // Generate fixing prompt
+            var fixingPrompt = _codeFixingPromptService.GenerateCodeFixingPrompt(
+                generationRequest, 
+                string.Join("\n", compilationErrors));
+
+            // Request code fix from LLM using the code fixing prompt
+            // Since the GenerateCodeAsync method expects intent and ruleStatement, we'll pass the prompt as intent
+            var fixedCodeResponse = await _ruleGenerationService.GenerateCodeAsync(fixingPrompt, generationRequest.RuleDescription);
+            
+            if (string.IsNullOrWhiteSpace(fixedCodeResponse))
+            {
+                generationRequest.Status = "RequiresManualReview";
+                generationRequest.RequiresManualReview = true;
+                generationRequest.AutoFixReason += " - LLM failed to generate fixed code";
+                generationRequest.LastModified = DateTime.UtcNow;
+                await _generationRepository.UpdateAsync(generationRequest);
+                await _generationRepository.SaveChangesAsync();
+                return false;
+            }
+
+            // Clean and extract the C# code from LLM response
+            var cleanedCode = ExtractCSharpCode(fixedCodeResponse);
+            generationRequest.GeneratedCode = cleanedCode;
+            generationRequest.Status = "CodeGenerated";
+            generationRequest.LastModified = DateTime.UtcNow;
+
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+
+            // Try to compile the fixed code by recursively calling ActivateRuleAsync
+            // This will handle the next compilation attempt and potentially mark for manual review if it fails again
+            return await ActivateRuleAsync(generationRequest.Id);
+        }
+        catch (Exception ex)
+        {
+            generationRequest.Status = "RequiresManualReview";
+            generationRequest.RequiresManualReview = true;
+            generationRequest.AutoFixReason = $"Auto-fix failed with exception: {ex.Message}";
+            generationRequest.CompilationErrors = $"Auto-fix exception: {ex.Message}";
+            generationRequest.LastModified = DateTime.UtcNow;
+            
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+            return false;
+        }
+    }
+
+    private string ExtractCSharpCode(string llmResponse)
+    {
+        // Remove markdown code block markers if present
+        var response = llmResponse.Trim();
+        
+        // Remove ```csharp and ``` markers
+        if (response.StartsWith("```csharp"))
+        {
+            response = response.Substring(9);
+        }
+        else if (response.StartsWith("```"))
+        {
+            response = response.Substring(3);
+        }
+        
+        if (response.EndsWith("```"))
+        {
+            response = response.Substring(0, response.Length - 3);
+        }
+
+        // Clean up extra whitespace
+        response = response.Trim();
+
+        // Ensure we have a complete method
+        if (!response.Contains("public static ShiftClassificationResult CalculatePayroll"))
+        {
+            throw new InvalidOperationException("LLM response does not contain the required method signature");
+        }
+
+        return response;
+    }
+
+    public async Task<bool> RegenerateFailedRuleAsync(Guid ruleId)
+    {
+        var generationRequest = await _generationRepository.GetByIdAsync(ruleId);
+        if (generationRequest == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            // Reset the rule for regeneration
+            generationRequest.Status = "Pending";
+            generationRequest.AutoFixAttempted = false;
+            generationRequest.RequiresManualReview = false;
+            generationRequest.GenerationAttemptCount = 1;
+            generationRequest.AutoFixReason = null;
+            generationRequest.CompilationErrors = null;
+            generationRequest.LastModified = DateTime.UtcNow;
+
+            // Generate new rule code
+            var newGenerationRequest = await _ruleGenerationService.CreateRuleAsync(
+                generationRequest.RuleDescription.Split(" - ")[0], // Extract rule statement
+                generationRequest.RuleDescription,
+                generationRequest.CreatedBy);
+
+            // Update with new generated code
+            generationRequest.GeneratedCode = newGenerationRequest.GeneratedCode;
+            generationRequest.Intent = newGenerationRequest.Intent;
+            generationRequest.Status = newGenerationRequest.Status;
+
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            generationRequest.Status = "RegenerationFailed";
+            generationRequest.CompilationErrors = $"Regeneration failed: {ex.Message}";
+            generationRequest.LastModified = DateTime.UtcNow;
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+            return false;
+        }
     }
 }

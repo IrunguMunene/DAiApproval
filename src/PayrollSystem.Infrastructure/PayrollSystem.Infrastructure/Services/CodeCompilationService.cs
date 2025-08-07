@@ -82,21 +82,99 @@ public class CodeCompilationService : ICodeCompilationService
                 result.Success = false;
                 result.Errors = compilationResult.Diagnostics
                     .Where(d => d.Severity == DiagnosticSeverity.Error)
-                    .Select(d => d.GetMessage())
+                    .Select(d => FormatDiagnosticMessage(d))
                     .ToList();
                 result.Warnings = compilationResult.Diagnostics
                     .Where(d => d.Severity == DiagnosticSeverity.Warning)
-                    .Select(d => d.GetMessage())
+                    .Select(d => FormatDiagnosticMessage(d))
                     .ToList();
+                
+                // Enhanced error analysis for auto-fix
+                result.DetailedErrors = AnalyzeCompilationErrors(compilationResult.Diagnostics);
+                result.GeneratedFullCode = fullCode; // Store for debugging
+                result.IsAutoFixable = DetermineIfAutoFixable(compilationResult.Diagnostics);
             }
         }
         catch (Exception ex)
         {
             result.Success = false;
             result.Errors.Add($"Compilation exception: {ex.Message}");
+            result.IsAutoFixable = false;
         }
 
         return await Task.FromResult(result);
+    }
+
+    private string FormatDiagnosticMessage(Diagnostic diagnostic)
+    {
+        var location = diagnostic.Location.IsInSource ? 
+            $" at line {diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1}" : "";
+        return $"{diagnostic.Id}: {diagnostic.GetMessage()}{location}";
+    }
+
+    private List<CompilationError> AnalyzeCompilationErrors(IEnumerable<Diagnostic> diagnostics)
+    {
+        var errors = new List<CompilationError>();
+
+        foreach (var diagnostic in diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
+        {
+            errors.Add(new CompilationError
+            {
+                Code = diagnostic.Id,
+                Message = diagnostic.GetMessage(),
+                LineNumber = diagnostic.Location.IsInSource ? 
+                    diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1 : 0,
+                Severity = diagnostic.Severity.ToString(),
+                Category = CategorizeError(diagnostic.Id),
+                AutoFixable = IsErrorAutoFixable(diagnostic.Id)
+            });
+        }
+
+        return errors;
+    }
+
+    private bool DetermineIfAutoFixable(IEnumerable<Diagnostic> diagnostics)
+    {
+        var errorCodes = diagnostics
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Select(d => d.Id)
+            .ToList();
+
+        // These error types are typically auto-fixable
+        var autoFixableErrors = new[] { "CS0103", "CS0117", "CS0029", "CS1002", "CS0161", "CS0246", "CS0128", "CS0165" };
+        
+        // These error types are typically NOT auto-fixable (structural issues)
+        var nonAutoFixableErrors = new[] { "CS0116", "CS1513", "CS1514", "CS1003" };
+
+        // If any non-auto-fixable errors exist, don't attempt auto-fix
+        if (errorCodes.Any(code => nonAutoFixableErrors.Contains(code)))
+        {
+            return false;
+        }
+
+        // If all errors are auto-fixable types, attempt auto-fix
+        return errorCodes.Any(code => autoFixableErrors.Contains(code));
+    }
+
+    private string CategorizeError(string errorCode)
+    {
+        return errorCode switch
+        {
+            "CS0103" or "CS0117" => "NameResolution",
+            "CS0029" or "CS0030" => "TypeConversion", 
+            "CS1002" or "CS1003" => "Syntax",
+            "CS0161" => "ControlFlow",
+            "CS0246" => "TypeNotFound",
+            "CS0128" => "VariableDeclaration",
+            "CS0165" => "UninitializedVariable",
+            _ => "Other"
+        };
+    }
+
+    private bool IsErrorAutoFixable(string errorCode)
+    {
+        var autoFixableErrors = new[] { "CS0103", "CS0117", "CS0029", "CS1002", "CS0161", "CS0246", "CS0128", "CS0165" };
+        return autoFixableErrors.Contains(errorCode);
     }
     public async Task<bool> LoadCompiledFunctionAsync(string functionName, byte[] compiledAssembly)
     {

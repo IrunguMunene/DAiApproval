@@ -62,6 +62,11 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  regenerateRule(ruleId: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/rule/${ruleId}/regenerate`, {})
+      .pipe(catchError(this.handleError));
+  }
+
   testRule(ruleId: string, request: TestRuleRequest): Observable<TestRuleResponse> {
     // Convert TestRuleRequest to ShiftClassificationRequest format
     const shiftRequest = {

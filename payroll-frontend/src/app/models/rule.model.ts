@@ -28,6 +28,16 @@ export interface RuleGenerationResponse {
   compilationErrors: string[];
   createdAt: string; // ISO date string
   createdBy?: string;
+  
+  // Auto-fix tracking fields
+  generationAttemptCount: number;
+  autoFixAttempted: boolean;
+  originalGeneratedCode?: string;
+  originalCompilationErrors?: string;
+  autoFixAttemptedAt?: string; // ISO date string
+  requiresManualReview: boolean;
+  autoFixReason?: string;
+  lastModified: string; // ISO date string
 }
 
 export interface TestRuleRequest {

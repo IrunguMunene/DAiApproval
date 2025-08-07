@@ -126,4 +126,22 @@ public class RuleController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    [HttpPost("{ruleId}/regenerate")]
+    public async Task<IActionResult> RegenerateRule(Guid ruleId)
+    {
+        try
+        {
+            var success = await _ruleManagementService.RegenerateFailedRuleAsync(ruleId);
+            if (success)
+            {
+                return Ok(new { message = "Rule regeneration initiated successfully" });
+            }
+            return BadRequest(new { error = "Failed to regenerate rule" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }

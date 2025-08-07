@@ -12,4 +12,5 @@ public interface IRuleManagementService
     Task<List<RuleGenerationResponseDto>> GetRuleGenerationRequestsAsync(string organizationId);
     Task<PayRule?> GetRuleByIdAsync(Guid ruleId);
     Task<List<RuleGenerationResponseDto>> GetRulesWithCompilationErrorsAsync(string organizationId);
+    Task<bool> RegenerateFailedRuleAsync(Guid ruleId);
 }

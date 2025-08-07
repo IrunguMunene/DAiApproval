@@ -10,8 +10,9 @@ This is a **fully implemented AI-Orchestrated Payroll System** that dynamically 
 
 ### Prerequisites
 - .NET 9.0 SDK
-- SQL Server (LocalDB is used by default)
 - Ollama with llama3.2 and qwen2.5-coder models (optional for AI features)
+
+**Note**: No database installation required - uses SQLite with automatic creation.
 
 ### Build Commands
 ```bash
@@ -42,7 +43,7 @@ dotnet build --verbosity normal
 
 **Technology Stack**:
 - **.NET 9.0 Web API** backend with clean architecture
-- **Entity Framework Core 9.0** with SQL Server LocalDB
+- **Entity Framework Core 9.0** with SQLite (cross-platform, auto-creating)
 - **Ollama Integration** (llama3.2 + qwen2.5-coder models) for AI rule generation
 - **Microsoft.CodeAnalysis.CSharp** for runtime C# compilation
 - **Repository Pattern** for data access abstraction
@@ -86,27 +87,29 @@ dotnet build --verbosity normal
 
 ## Database Schema
 
-The system uses SQL Server with Entity Framework Code-First approach:
+The system uses SQLite with Entity Framework Code-First approach:
 - **PayRules**: Stores generated payroll rules and their C# code
 - **RuleExecutions**: Audit trail of all rule executions
 - **RuleGenerationRequests**: Tracks AI-generated rule requests and their status
 
-Database is created automatically on first run using `EnsureCreatedAsync()`.
+Database is created automatically on first run with comprehensive initialization and error handling.
 
 ## Configuration
 
 ### Connection Strings
-Default LocalDB connection string in `appsettings.json`:
+Default SQLite connection string in `appsettings.json`:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=PayrollSystemDb;Trusted_Connection=true;MultipleActiveResultSets=true"
+    "DefaultConnection": "Data Source=PayrollSystem.db"
   },
   "Ollama": {
     "BaseUrl": "http://localhost:11434"
   }
 }
 ```
+
+**Database File**: The SQLite database file `PayrollSystem.db` is created automatically in the API project directory on first run.
 
 ### Ollama Setup (Optional)
 To use AI rule generation features:

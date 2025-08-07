@@ -49,6 +49,22 @@
   },
   {
     "ContainingType": "PayrollSystem.API.Controllers.RuleController",
+    "Method": "RegenerateRule",
+    "RelativePath": "api/Rule/{ruleId}/regenerate",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "ruleId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PayrollSystem.API.Controllers.RuleController",
     "Method": "GetActiveRules",
     "RelativePath": "api/Rule/active",
     "HttpMethod": "GET",

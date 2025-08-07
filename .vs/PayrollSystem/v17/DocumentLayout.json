@@ -1,0 +1,186 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Development\\AI\\DAiApproval\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{7092DB70-150D-42FC-8B05-26B08801DB75}|src\\PayrollSystem.Application\\PayrollSystem.Application\\PayrollSystem.Application.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.application\\payrollsystem.application\\services\\shiftclassificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7092DB70-150D-42FC-8B05-26B08801DB75}|src\\PayrollSystem.Application\\PayrollSystem.Application\\PayrollSystem.Application.csproj|solutionrelative:src\\payrollsystem.application\\payrollsystem.application\\services\\shiftclassificationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7092DB70-150D-42FC-8B05-26B08801DB75}|src\\PayrollSystem.Application\\PayrollSystem.Application\\PayrollSystem.Application.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.application\\payrollsystem.application\\services\\rulemanagementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7092DB70-150D-42FC-8B05-26B08801DB75}|src\\PayrollSystem.Application\\PayrollSystem.Application\\PayrollSystem.Application.csproj|solutionrelative:src\\payrollsystem.application\\payrollsystem.application\\services\\rulemanagementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1C5E8CC6-6A4F-476A-855D-7CDE0254F0E7}|src\\PayrollSystem.API\\PayrollSystem.API\\PayrollSystem.API.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.api\\payrollsystem.api\\controllers\\rulecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1C5E8CC6-6A4F-476A-855D-7CDE0254F0E7}|src\\PayrollSystem.API\\PayrollSystem.API\\PayrollSystem.API.csproj|solutionrelative:src\\payrollsystem.api\\payrollsystem.api\\controllers\\rulecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A4DA6E06-3F40-4B8A-9BB6-3940AB10ECEA}|src\\PayrollSystem.Domain\\PayrollSystem.Domain\\PayrollSystem.Domain.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.domain\\payrollsystem.domain\\models\\shiftclassificationresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A4DA6E06-3F40-4B8A-9BB6-3940AB10ECEA}|src\\PayrollSystem.Domain\\PayrollSystem.Domain\\PayrollSystem.Domain.csproj|solutionrelative:src\\payrollsystem.domain\\payrollsystem.domain\\models\\shiftclassificationresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{74B33409-338A-49AC-8003-CDDED6A2139A}|src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.infrastructure\\payrollsystem.infrastructure\\services\\codecompilationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{74B33409-338A-49AC-8003-CDDED6A2139A}|src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure.csproj|solutionrelative:src\\payrollsystem.infrastructure\\payrollsystem.infrastructure\\services\\codecompilationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1C5E8CC6-6A4F-476A-855D-7CDE0254F0E7}|src\\PayrollSystem.API\\PayrollSystem.API\\PayrollSystem.API.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.api\\payrollsystem.api\\controllers\\shiftcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1C5E8CC6-6A4F-476A-855D-7CDE0254F0E7}|src\\PayrollSystem.API\\PayrollSystem.API\\PayrollSystem.API.csproj|solutionrelative:src\\payrollsystem.api\\payrollsystem.api\\controllers\\shiftcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{74B33409-338A-49AC-8003-CDDED6A2139A}|src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.infrastructure\\payrollsystem.infrastructure\\services\\ollamaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{74B33409-338A-49AC-8003-CDDED6A2139A}|src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure.csproj|solutionrelative:src\\payrollsystem.infrastructure\\payrollsystem.infrastructure\\services\\ollamaservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{74B33409-338A-49AC-8003-CDDED6A2139A}|src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.infrastructure\\payrollsystem.infrastructure\\repositories\\payrulerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{74B33409-338A-49AC-8003-CDDED6A2139A}|src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure.csproj|solutionrelative:src\\payrollsystem.infrastructure\\payrollsystem.infrastructure\\repositories\\payrulerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7092DB70-150D-42FC-8B05-26B08801DB75}|src\\PayrollSystem.Application\\PayrollSystem.Application\\PayrollSystem.Application.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.application\\payrollsystem.application\\dtos\\shiftclassificationrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7092DB70-150D-42FC-8B05-26B08801DB75}|src\\PayrollSystem.Application\\PayrollSystem.Application\\PayrollSystem.Application.csproj|solutionrelative:src\\payrollsystem.application\\payrollsystem.application\\dtos\\shiftclassificationrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A4DA6E06-3F40-4B8A-9BB6-3940AB10ECEA}|src\\PayrollSystem.Domain\\PayrollSystem.Domain\\PayrollSystem.Domain.csproj|d:\\development\\ai\\daiapproval\\src\\payrollsystem.domain\\payrollsystem.domain\\entities\\shift.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A4DA6E06-3F40-4B8A-9BB6-3940AB10ECEA}|src\\PayrollSystem.Domain\\PayrollSystem.Domain\\PayrollSystem.Domain.csproj|solutionrelative:src\\payrollsystem.domain\\payrollsystem.domain\\entities\\shift.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 6,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "RuleManagementService.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\RuleManagementService.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\RuleManagementService.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\RuleManagementService.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\RuleManagementService.cs",
+              "ViewState": "AgIAADEAAAAAAAAAAAAiwD8AAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T19:48:59.239Z",
+              "IsPinned": true
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ShiftController.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\ShiftController.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\ShiftController.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\ShiftController.cs",
+              "RelativeToolTip": "src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\ShiftController.cs",
+              "ViewState": "AgIAACMAAAAAAAAAAAAswDIAAABDAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T21:38:54.983Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "CodeCompilationService.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\CodeCompilationService.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\CodeCompilationService.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\CodeCompilationService.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\CodeCompilationService.cs",
+              "ViewState": "AgIAAIEAAAAAAAAAAAAWwI4AAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T20:27:37.656Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "RuleController.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\RuleController.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\RuleController.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\RuleController.cs",
+              "RelativeToolTip": "src\\PayrollSystem.API\\PayrollSystem.API\\Controllers\\RuleController.cs",
+              "ViewState": "AgIAAB0AAAAAAAAAAAASwCUAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T19:45:14.642Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "ShiftClassificationResult.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Models\\ShiftClassificationResult.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Models\\ShiftClassificationResult.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Models\\ShiftClassificationResult.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Models\\ShiftClassificationResult.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAYwBAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T21:26:07.193Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ShiftClassificationService.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\ShiftClassificationService.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\ShiftClassificationService.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\ShiftClassificationService.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Application\\PayrollSystem.Application\\Services\\ShiftClassificationService.cs",
+              "ViewState": "AgIAAHAAAAAAAAAAAIAzwH4AAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T22:08:44.562Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "PayRuleRepository.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Repositories\\PayRuleRepository.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Repositories\\PayRuleRepository.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Repositories\\PayRuleRepository.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Repositories\\PayRuleRepository.cs",
+              "ViewState": "AgIAAE4AAAAAAAAAAIAzwFkAAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T20:24:23.381Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "OllamaService.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\OllamaService.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\OllamaService.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\OllamaService.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Infrastructure\\PayrollSystem.Infrastructure\\Services\\OllamaService.cs",
+              "ViewState": "AgIAAH4AAAAAAAAAAAA3wIEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T19:14:57.207Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "ShiftClassificationRequest.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Application\\PayrollSystem.Application\\DTOs\\ShiftClassificationRequest.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Application\\PayrollSystem.Application\\DTOs\\ShiftClassificationRequest.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Application\\PayrollSystem.Application\\DTOs\\ShiftClassificationRequest.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Application\\PayrollSystem.Application\\DTOs\\ShiftClassificationRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T22:29:24.892Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "Shift.cs",
+              "DocumentMoniker": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Entities\\Shift.cs",
+              "RelativeDocumentMoniker": "src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Entities\\Shift.cs",
+              "ToolTip": "D:\\Development\\AI\\DAiApproval\\src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Entities\\Shift.cs",
+              "RelativeToolTip": "src\\PayrollSystem.Domain\\PayrollSystem.Domain\\Entities\\Shift.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-04T21:38:05.591Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
