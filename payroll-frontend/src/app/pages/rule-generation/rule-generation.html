@@ -48,6 +48,45 @@
             </mat-error>
           </mat-form-field>
 
+          <!-- Example Section -->
+          <div class="example-section">
+            <h3>Rule Example (Required)</h3>
+            <p class="example-instructions">
+              Provide a specific example of when this rule should apply using actual shift times and describe the expected outcome.
+            </p>
+
+            <div class="example-row">
+              <mat-form-field class="half-width">
+                <mat-label>Example Shift Start</mat-label>
+                <input matInput type="datetime-local" formControlName="exampleShiftStart">
+                <mat-error *ngIf="ruleForm.get('exampleShiftStart')?.hasError('required')">
+                  Example shift start is required
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field class="half-width">
+                <mat-label>Example Shift End</mat-label>
+                <input matInput type="datetime-local" formControlName="exampleShiftEnd">
+                <mat-error *ngIf="ruleForm.get('exampleShiftEnd')?.hasError('required')">
+                  Example shift end is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field class="full-width">
+              <mat-label>Expected Outcome</mat-label>
+              <textarea 
+                matInput 
+                formControlName="expectedOutcome" 
+                rows="3"
+                placeholder="Describe what should happen for this example shift (e.g., 'First 8 hours should be Regular pay at $15/hour, hours 9-10 should be Overtime at $22.50/hour')">
+              </textarea>
+              <mat-error *ngIf="ruleForm.get('expectedOutcome')?.hasError('required')">
+                Expected outcome description is required
+              </mat-error>
+            </mat-form-field>
+          </div>
+
           <div class="form-actions">
             <button 
               mat-raised-button 

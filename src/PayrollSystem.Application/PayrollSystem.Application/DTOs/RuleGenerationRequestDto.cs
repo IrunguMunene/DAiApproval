@@ -5,6 +5,9 @@ public class RuleGenerationRequestDto
     public string RuleStatement { get; set; } = string.Empty;
     public string RuleDescription { get; set; } = string.Empty;
     public string OrganizationId { get; set; } = string.Empty;
+    public DateTime ExampleShiftStart { get; set; }
+    public DateTime ExampleShiftEnd { get; set; }
+    public string ExpectedOutcome { get; set; } = string.Empty;
 }
 
 public class RuleGenerationResponseDto

@@ -30,7 +30,10 @@ export class RuleGeneration implements OnInit {
     this.ruleForm = this.fb.group({
       ruleStatement: ['', Validators.required],
       ruleDescription: [''],
-      organizationId: ['demo-org', Validators.required]
+      organizationId: ['demo-org', Validators.required],
+      exampleShiftStart: ['', Validators.required],
+      exampleShiftEnd: ['', Validators.required],
+      expectedOutcome: ['', Validators.required]
     });
   }
 
@@ -43,7 +46,10 @@ export class RuleGeneration implements OnInit {
       const request: RuleGenerationRequest = {
         ruleStatement: this.ruleForm.value.ruleStatement,
         ruleDescription: this.ruleForm.value.ruleDescription,
-        organizationId: this.ruleForm.value.organizationId
+        organizationId: this.ruleForm.value.organizationId,
+        exampleShiftStart: this.ruleForm.value.exampleShiftStart,
+        exampleShiftEnd: this.ruleForm.value.exampleShiftEnd,
+        expectedOutcome: this.ruleForm.value.expectedOutcome
       };
       
       this.apiService.generateRule(request).subscribe({
@@ -75,7 +81,10 @@ export class RuleGeneration implements OnInit {
     this.ruleForm.reset({
       ruleStatement: '',
       ruleDescription: '',
-      organizationId: 'demo-org'
+      organizationId: 'demo-org',
+      exampleShiftStart: '',
+      exampleShiftEnd: '',
+      expectedOutcome: ''
     });
     this.generationResult = null;
     this.testResults = null;

@@ -28,11 +28,28 @@ public class RuleManagementService : IRuleManagementService
 
     public async Task<RuleGenerationResponseDto> GenerateRuleAsync(RuleGenerationRequestDto request, string createdBy)
     {
-        // Generate the rule using AI service
-        var generationRequest = await _ruleGenerationService.CreateRuleAsync(
-            request.RuleStatement, 
-            request.RuleDescription, 
-            createdBy);
+        // Generate the rule using AI service with example data if provided
+        RuleGenerationRequest generationRequest;
+        
+        if (request.ExampleShiftStart != default && request.ExampleShiftEnd != default && !string.IsNullOrEmpty(request.ExpectedOutcome))
+        {
+            // Use enhanced rule generation with example
+            generationRequest = await _ruleGenerationService.CreateRuleAsync(
+                request.RuleStatement, 
+                request.RuleDescription, 
+                createdBy,
+                request.ExampleShiftStart,
+                request.ExampleShiftEnd,
+                request.ExpectedOutcome);
+        }
+        else
+        {
+            // Fall back to original method
+            generationRequest = await _ruleGenerationService.CreateRuleAsync(
+                request.RuleStatement, 
+                request.RuleDescription, 
+                createdBy);
+        }
 
         generationRequest.OrganizationId = request.OrganizationId;
 

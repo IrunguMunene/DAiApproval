@@ -30,16 +30,32 @@ public class DatabaseInitializationService : IDatabaseInitializationService
 
             _logger.LogInformation("Starting database initialization...");
 
-            // Ensure database is created
-            var created = await context.Database.EnsureCreatedAsync();
+            // Check if schema needs to be updated by testing for new columns
+            bool needsSchemaUpdate = await CheckIfSchemaUpdateNeeded(context);
             
-            if (created)
+            if (needsSchemaUpdate)
             {
-                _logger.LogInformation("Database created successfully.");
+                _logger.LogInformation("Schema update needed. Recreating database with new schema...");
+                
+                // Delete and recreate database to apply schema changes
+                await context.Database.EnsureDeletedAsync();
+                await context.Database.EnsureCreatedAsync();
+                
+                _logger.LogInformation("Database recreated with updated schema.");
             }
             else
             {
-                _logger.LogInformation("Database already exists.");
+                // Ensure database is created
+                var created = await context.Database.EnsureCreatedAsync();
+                
+                if (created)
+                {
+                    _logger.LogInformation("Database created successfully.");
+                }
+                else
+                {
+                    _logger.LogInformation("Database already exists with correct schema.");
+                }
             }
 
             // Verify database connectivity
@@ -64,6 +80,25 @@ public class DatabaseInitializationService : IDatabaseInitializationService
             throw new InvalidOperationException(
                 $"Failed to initialize database. This may be due to missing SQLite support on this system. " +
                 $"Original error: {ex.Message}", ex);
+        }
+    }
+
+    private async Task<bool> CheckIfSchemaUpdateNeeded(PayrollDbContext context)
+    {
+        try
+        {
+            // Try to check if the new columns exist by attempting to query them
+            var testQuery = context.RuleGenerationRequests
+                .Select(r => new { r.ExampleShiftStart, r.ExampleShiftEnd, r.ExpectedOutcome })
+                .Take(1);
+                
+            await testQuery.ToListAsync();
+            return false; // Schema is up to date
+        }
+        catch
+        {
+            // If query fails, it means the columns don't exist and we need schema update
+            return true;
         }
     }
 
