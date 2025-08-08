@@ -127,6 +127,11 @@ bazel-out
 
 # Angular CLI and Webpack
 .angular/
+.sass-cache/
+/connect.lock
+/libpeerconnection.log
+testem.log
+/typings
 
 # Dependencies
 node_modules/
