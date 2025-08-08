@@ -55,6 +55,61 @@
   margin-bottom: 16px;
 }
 
+.half-width {
+  width: calc(50% - 8px);
+  margin-bottom: 16px;
+}
+
+.example-section {
+  margin-top: 32px;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  
+  h3 {
+    color: #333;
+    font-size: 1.2rem;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    &::before {
+      content: "⭐";
+      font-size: 1.1rem;
+    }
+  }
+  
+  .example-instructions {
+    color: #666;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+  
+  .example-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    
+    @media (max-width: 600px) {
+      flex-direction: column;
+      
+      .half-width {
+        width: 100%;
+      }
+    }
+  }
+  
+  .mat-mdc-form-field {
+    .mdc-text-field--filled {
+      background-color: white;
+    }
+  }
+}
+
 .form-actions {
   display: flex;
   gap: 16px;

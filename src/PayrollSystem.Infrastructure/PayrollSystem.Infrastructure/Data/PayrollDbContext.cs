@@ -52,6 +52,7 @@ public class PayrollDbContext : DbContext
         modelBuilder.Entity<RuleGenerationRequest>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.RuleStatement).HasMaxLength(500).IsRequired();
             entity.Property(e => e.RuleDescription).HasMaxLength(1000).IsRequired();
             entity.Property(e => e.Intent).HasColumnType("TEXT");
             entity.Property(e => e.GeneratedCode).HasColumnType("TEXT");
@@ -59,6 +60,9 @@ public class PayrollDbContext : DbContext
             entity.Property(e => e.CompilationErrors).HasColumnType("TEXT");
             entity.Property(e => e.OrganizationId).HasMaxLength(50).IsRequired();
             entity.Property(e => e.CreatedBy).HasMaxLength(100);
+            entity.Property(e => e.ExampleShiftStart).IsRequired();
+            entity.Property(e => e.ExampleShiftEnd).IsRequired();
+            entity.Property(e => e.ExpectedOutcome).HasMaxLength(2000).IsRequired();
             
             // Auto-fix tracking fields
             entity.Property(e => e.GenerationAttemptCount).HasDefaultValue(1);

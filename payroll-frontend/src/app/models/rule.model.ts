@@ -16,6 +16,9 @@ export interface RuleGenerationRequest {
   ruleStatement: string;
   ruleDescription: string;
   organizationId: string;
+  exampleShiftStart: string; // ISO date string
+  exampleShiftEnd: string; // ISO date string
+  expectedOutcome: string;
 }
 
 export interface RuleGenerationResponse {

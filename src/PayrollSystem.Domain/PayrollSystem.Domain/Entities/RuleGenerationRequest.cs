@@ -3,6 +3,7 @@ namespace PayrollSystem.Domain.Entities;
 public class RuleGenerationRequest
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string RuleStatement { get; set; } = string.Empty;
     public string RuleDescription { get; set; } = string.Empty;
     public string Intent { get; set; } = string.Empty;
     public string GeneratedCode { get; set; } = string.Empty;
@@ -11,6 +12,9 @@ public class RuleGenerationRequest
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;
     public string OrganizationId { get; set; } = string.Empty;
+    public DateTime ExampleShiftStart { get; set; }
+    public DateTime ExampleShiftEnd { get; set; }
+    public string ExpectedOutcome { get; set; } = string.Empty;
     
     // Auto-fix tracking fields
     public int GenerationAttemptCount { get; set; } = 1;

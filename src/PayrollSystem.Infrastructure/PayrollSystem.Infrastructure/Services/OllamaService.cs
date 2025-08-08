@@ -21,20 +21,35 @@ public class OllamaService : IRuleGenerationService
     }
     public async Task<string> ExtractIntentAsync(string ruleStatement, string description)
     {
-        var prompt = $@"Extract the intent from this payroll rule statement.
-                        Focus on: time calculations, conditions, thresholds, pay code types.
-
-                        Rule: ""{ruleStatement}""
-                        Description: ""{description}""
-
-                        Respond with structured intent in this format:
-                        - Calculation Type: [overtime/regular/holiday/etc]
-                        - Conditions: [time thresholds, day conditions, etc]
-                        - Logic: [step-by-step calculation logic]";
+        var prompt = PayrollPromptTemplates.GetIntentExtractionPrompt(ruleStatement, description);
 
         var request = new
         {
-            model = "llama3.2",
+            model = PayrollPromptTemplates.GetIntentExtractionModel(),
+            prompt = prompt,
+            stream = false
+        };
+
+        var response = await _httpClient.PostAsync($"{_ollamaBaseUrl}/api/generate", 
+            new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json"));
+
+        if (response.IsSuccessStatusCode)
+        {
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseJson = JsonSerializer.Deserialize<JsonElement>(responseContent);
+            return responseJson.GetProperty("response").GetString() ?? "";
+        }
+
+        throw new Exception($"Failed to extract intent: {response.StatusCode}");
+    }
+
+    public async Task<string> ExtractIntentAsync(string ruleStatement, string description, DateTime exampleShiftStart, DateTime exampleShiftEnd, string expectedOutcome)
+    {
+        var prompt = PayrollPromptTemplates.GetIntentExtractionPrompt(ruleStatement, description, exampleShiftStart, exampleShiftEnd, expectedOutcome);
+
+        var request = new
+        {
+            model = PayrollPromptTemplates.GetIntentExtractionModel(),
             prompt = prompt,
             stream = false
         };
@@ -56,74 +71,11 @@ public class OllamaService : IRuleGenerationService
         // Generate class definitions dynamically using reflection
         var classDefinitions = GenerateClassDefinitions();
         
-        var prompt = $@"Generate a C# method that implements this payroll rule intent.
-
-                        INTENT: {intent}
-
-                        RULE STATEMENT: {ruleStatement}
-
-                        REQUIREMENTS:
-                        - Method signature: public ShiftClassificationResult CalculatePayroll(Shift shift)
-                        - Method must be NON-STATIC (instance method, not static)
-                        - Focus on SINGLE PAYCODE CLASSIFICATION ONLY - create only ONE PayCodeAllocation per rule
-                        - If rule involves multiple pay types, focus on the PRIMARY pay type mentioned
-                        - Return ShiftClassificationResult with exactly ONE PayCodeAllocation entry
-                        - Use DateTime calculations for time spans
-                        - Handle edge cases appropriately
-                        - Include descriptive comments explaining the single paycode logic
-                        - Return the method declaration and body ONLY
-
-                        EXACT CLASS DEFINITIONS (DO NOT MODIFY THESE):
-
-                        {classDefinitions}
-
-                        IMPORTANT: Use ONLY the properties listed above. Do NOT add, modify, or assume additional properties exist.
-
-                        SINGLE PAYCODE FOCUS:
-                        - Each rule should handle ONE specific pay code type (e.g., Overtime, Regular, Holiday, Night Differential)
-                        - Calculate hours that qualify for that specific pay code only
-                        - If shift has mixed time (regular + overtime), focus only on the overtime portion for an overtime rule
-                        - Set Hours property to the calculated hours for that specific pay code
-                        - Use descriptive PayCodeName that matches the rule intent
-
-                        EXAMPLE OUTPUT STRUCTURE:
-                        ```csharp
-                        public ShiftClassificationResult CalculatePayroll(Shift shift)
-                        {{
-                            var result = new ShiftClassificationResult
-                            {{
-                                EmployeeName = shift.EmployeeName,
-                                ShiftStart = shift.StartDateTime,
-                                ShiftEnd = shift.EndDateTime,
-                                PayCodeAllocations = new List<PayCodeAllocation>()
-                            }};
-
-                            // Calculate total hours worked
-                            var totalHours = shift.Duration.TotalHours;
-    
-                            // Focus on single paycode classification
-                            // Example: For overtime rule, calculate only overtime hours
-                            var overtimeHours = Math.Max(0, totalHours - 8.0);
-                            
-                            if (overtimeHours > 0)
-                            {{
-                                result.PayCodeAllocations.Add(new PayCodeAllocation
-                                {{
-                                    PayCodeName = ""Overtime"",
-                                    Hours = overtimeHours,
-                                    Description = ""Overtime hours over 8 per day""
-                                }});
-                            }}
-    
-                            return result;
-                        }}
-                        ```
-
-                        Generate ONLY the C# method code, no additional text.";
+        var prompt = PayrollPromptTemplates.GetCodeGenerationPrompt(intent, ruleStatement, classDefinitions);
 
         var request = new
         {
-            model = "qwen2.5-coder",
+            model = PayrollPromptTemplates.GetCodeGenerationModel(),
             prompt = prompt,
             stream = false
         };
@@ -147,6 +99,7 @@ public class OllamaService : IRuleGenerationService
     {
         var request = new RuleGenerationRequest
         {
+            RuleStatement = ruleStatement,
             RuleDescription = ruleStatement + " - " + description,
             CreatedBy = createdBy,
             Status = "Generating"
@@ -156,6 +109,41 @@ public class OllamaService : IRuleGenerationService
         {
             // Extract intent
             var intent = await ExtractIntentAsync(ruleStatement, description);
+            request.Intent = intent;
+            request.Status = "IntentExtracted";
+
+            // Generate code
+            var code = await GenerateCodeAsync(intent, ruleStatement);
+            request.GeneratedCode = code;
+            request.Status = "CodeGenerated";
+
+            return request;
+        }
+        catch (Exception ex)
+        {
+            request.Status = "Failed";
+            request.CompilationErrors = ex.Message;
+            return request;
+        }
+    }
+
+    public async Task<RuleGenerationRequest> CreateRuleAsync(string ruleStatement, string description, string createdBy, DateTime exampleShiftStart, DateTime exampleShiftEnd, string expectedOutcome)
+    {
+        var request = new RuleGenerationRequest
+        {
+            RuleStatement = ruleStatement,
+            RuleDescription = ruleStatement + " - " + description,
+            CreatedBy = createdBy,
+            Status = "Generating",
+            ExampleShiftStart = exampleShiftStart,
+            ExampleShiftEnd = exampleShiftEnd,
+            ExpectedOutcome = expectedOutcome
+        };
+
+        try
+        {
+            // Extract intent with example
+            var intent = await ExtractIntentAsync(ruleStatement, description, exampleShiftStart, exampleShiftEnd, expectedOutcome);
             request.Intent = intent;
             request.Status = "IntentExtracted";
 
