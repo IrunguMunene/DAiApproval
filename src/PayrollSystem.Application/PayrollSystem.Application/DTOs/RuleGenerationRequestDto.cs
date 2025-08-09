@@ -32,3 +32,8 @@ public class RuleGenerationResponseDto
     public string? AutoFixReason { get; set; }
     public DateTime LastModified { get; set; }
 }
+
+public class IntentReviewDto
+{
+    public string ReviewedIntent { get; set; } = string.Empty;
+}

@@ -593,3 +593,88 @@
     }
   }
 }
+
+// New Workflow Styles
+.workflow-stepper {
+  margin: 20px 0 30px 0;
+  background: transparent;
+}
+
+.intent-review-container {
+  max-width: 900px;
+  margin: 0 auto 40px auto;
+}
+
+.intent-review-section {
+  .mat-mdc-card-header {
+    .mat-mdc-card-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.3rem;
+    }
+  }
+}
+
+.original-rule-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+  border-left: 4px solid #1976d2;
+
+  h4 {
+    margin: 0 0 12px 0;
+    color: #1976d2;
+    font-size: 1.1rem;
+  }
+
+  .rule-statement {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 1rem;
+  }
+
+  .rule-description {
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+.navigation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 20px;
+}
+
+// Additional responsive design for new workflow
+@media (max-width: 768px) {
+  .workflow-stepper {
+    margin: 15px 0 20px 0;
+  }
+  
+  .intent-review-container {
+    margin-bottom: 30px;
+  }
+  
+  .navigation-actions {
+    flex-direction: column;
+    
+    button {
+      width: 100%;
+    }
+  }
+  
+  .original-rule-info {
+    padding: 15px;
+    
+    .rule-statement {
+      font-size: 0.95rem;
+    }
+  }
+}

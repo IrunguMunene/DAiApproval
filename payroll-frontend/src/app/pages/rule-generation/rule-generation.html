@@ -5,23 +5,30 @@
       Generate Payroll Rules
     </h1>
     <p class="page-subtitle">
-      Describe your payroll rule in plain English and let AI generate the C# code for you
+      AI-assisted payroll rule creation with intent review
     </p>
+    
+    <!-- Progress Stepper -->
+    <mat-horizontal-stepper [selectedIndex]="currentStep === 'input' ? 0 : currentStep === 'intent-review' ? 1 : 2" class="workflow-stepper">
+      <mat-step label="Rule Description" [completed]="currentStep !== 'input'"></mat-step>
+      <mat-step label="Intent Review" [completed]="currentStep === 'results'"></mat-step>
+      <mat-step label="Generated Code"></mat-step>
+    </mat-horizontal-stepper>
   </div>
 
-  <div class="input-container">
-    <!-- Rule Input Section -->
+  <!-- Step 1: Rule Input Section -->
+  <div class="input-container" *ngIf="currentStep === 'input'">
     <mat-card class="input-section">
       <mat-card-header>
         <mat-card-title>
           <mat-icon>edit</mat-icon>
-          Rule Description
+          Step 1: Describe Your Rule
         </mat-card-title>
         <mat-card-subtitle>Describe your payroll rule in natural language</mat-card-subtitle>
       </mat-card-header>
       
       <mat-card-content>
-        <form [formGroup]="ruleForm" (ngSubmit)="generateRule()">
+        <form [formGroup]="ruleForm" (ngSubmit)="extractIntent()">
           <mat-form-field class="full-width">
             <mat-label>Rule Statement</mat-label>
             <input matInput formControlName="ruleStatement" placeholder="e.g., Overtime pay at 1.5x rate after 8 hours per day">
@@ -93,9 +100,9 @@
               color="primary" 
               type="submit"
               [disabled]="ruleForm.invalid || isLoading">
-              <mat-icon>auto_fix_high</mat-icon>
-              <span *ngIf="!isLoading">Generate Rule</span>
-              <span *ngIf="isLoading">Generating...</span>
+              <mat-icon>psychology</mat-icon>
+              <span *ngIf="!isLoading">Extract Intent</span>
+              <span *ngIf="isLoading">Extracting...</span>
             </button>
             
             <button 
@@ -106,6 +113,78 @@
               <mat-icon>clear</mat-icon>
               Clear Form
             </button>
+            
+            <!-- Legacy button for direct rule generation -->
+            <button 
+              mat-stroked-button 
+              color="accent"
+              type="button"
+              (click)="generateRule()"
+              [disabled]="ruleForm.invalid || isLoading">
+              <mat-icon>auto_fix_high</mat-icon>
+              <span *ngIf="!isLoading">Generate Rule (Legacy)</span>
+              <span *ngIf="isLoading">Generating...</span>
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Step 2: Intent Review Section -->
+  <div class="intent-review-container" *ngIf="currentStep === 'intent-review'">
+    <mat-card class="intent-review-section">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>psychology</mat-icon>
+          Step 2: Review & Edit Intent
+        </mat-card-title>
+        <mat-card-subtitle>The AI has extracted the intent from your rule. Please review and edit as needed.</mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <div class="original-rule-info">
+          <h4>Original Rule Statement:</h4>
+          <p class="rule-statement">{{ ruleForm.get('ruleStatement')?.value }}</p>
+          <p class="rule-description" *ngIf="ruleForm.get('ruleDescription')?.value">
+            <strong>Description:</strong> {{ ruleForm.get('ruleDescription')?.value }}
+          </p>
+        </div>
+
+        <form [formGroup]="intentForm" (ngSubmit)="generateCode()">
+          <mat-form-field class="full-width">
+            <mat-label>Extracted Intent (Review and Edit)</mat-label>
+            <textarea 
+              matInput 
+              formControlName="reviewedIntent" 
+              rows="8"
+              placeholder="AI-extracted intent will appear here. Please review and edit as needed.">
+            </textarea>
+            <mat-error *ngIf="intentForm.get('reviewedIntent')?.hasError('required')">
+              Intent is required to proceed
+            </mat-error>
+            <mat-hint>Review the AI's understanding and make any necessary corrections before proceeding to code generation.</mat-hint>
+          </mat-form-field>
+
+          <div class="form-actions">
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit"
+              [disabled]="intentForm.invalid || generatingCode">
+              <mat-icon>code</mat-icon>
+              <span *ngIf="!generatingCode">Generate Code</span>
+              <span *ngIf="generatingCode">Generating Code...</span>
+            </button>
+            
+            <button 
+              mat-stroked-button 
+              type="button"
+              (click)="goBackToInput()"
+              [disabled]="generatingCode">
+              <mat-icon>arrow_back</mat-icon>
+              Back to Rule Input
+            </button>
           </div>
         </form>
       </mat-card-content>
@@ -113,7 +192,7 @@
   </div>
 
   <!-- Loading Section -->
-  <div class="loading-section" *ngIf="isLoading">
+  <div class="loading-section" *ngIf="isLoading || generatingCode">
     <mat-card>
       <mat-card-content>
         <div class="loading-content">
@@ -126,15 +205,15 @@
     </mat-card>
   </div>
 
-  <!-- Results Section -->
-  <div class="results-section" *ngIf="generationResult && !isLoading">
+  <!-- Step 3: Results Section -->
+  <div class="results-section" *ngIf="currentStep === 'results' && generationResult && !isLoading && !generatingCode">
     <mat-card class="result-card">
       <mat-card-header>
         <mat-card-title>
           <mat-icon [color]="generationResult.compilationErrors.length > 0 ? 'warn' : 'primary'">
             {{ generationResult.compilationErrors.length > 0 ? 'error' : 'check_circle' }}
           </mat-icon>
-          Generation Results
+          Step 3: Generated Code Results
         </mat-card-title>
         <mat-card-subtitle>
           Status: {{ generationResult.status }}
@@ -276,6 +355,15 @@
                   <button 
                     mat-raised-button 
                     color="primary"
+                    (click)="goBackToIntentReview()"
+                    class="retry-button">
+                    <mat-icon>edit</mat-icon>
+                    Edit Intent
+                  </button>
+
+                  <button 
+                    mat-stroked-button 
+                    color="accent"
                     (click)="regenerateRule()"
                     class="retry-button">
                     <mat-icon>refresh</mat-icon>
@@ -284,17 +372,35 @@
                   
                   <button 
                     mat-stroked-button 
-                    color="accent"
-                    (click)="improveRuleDescription()"
+                    color="warn"
+                    (click)="goBackToInput()"
                     class="improve-button">
-                    <mat-icon>edit</mat-icon>
-                    Improve Description
+                    <mat-icon>first_page</mat-icon>
+                    Start Over
                   </button>
                 </div>
               </div>
             </div>
           </mat-tab>
         </mat-tab-group>
+
+        <!-- Navigation buttons -->
+        <div class="navigation-actions">
+          <button 
+            mat-stroked-button 
+            (click)="goBackToInput()">
+            <mat-icon>first_page</mat-icon>
+            Start Over
+          </button>
+          
+          <button 
+            mat-stroked-button 
+            (click)="goBackToIntentReview()"
+            *ngIf="currentStep === 'results'">
+            <mat-icon>arrow_back</mat-icon>
+            Back to Intent Review
+          </button>
+        </div>
       </mat-card-content>
     </mat-card>
   </div>

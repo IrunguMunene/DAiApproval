@@ -12,11 +12,15 @@ import { RuleGenerationRequest, RuleGenerationResponse, ShiftClassificationResul
 })
 export class RuleGeneration implements OnInit {
   ruleForm!: FormGroup;
+  intentForm!: FormGroup;
   isLoading = false;
   testingRule = false;
   activatingRule = false;
+  generatingCode = false;
   currentLoadingStep = '';
   
+  // Workflow state
+  currentStep: 'input' | 'intent-review' | 'results' = 'input';
   generationResult: RuleGenerationResponse | null = null;
   testResults: ShiftClassificationResult | null = null;
 
@@ -35,13 +39,97 @@ export class RuleGeneration implements OnInit {
       exampleShiftEnd: ['', Validators.required],
       expectedOutcome: ['', Validators.required]
     });
+
+    this.intentForm = this.fb.group({
+      reviewedIntent: ['', Validators.required]
+    });
   }
 
+  // Step 1: Extract Intent
+  extractIntent() {
+    if (this.ruleForm.valid) {
+      this.isLoading = true;
+      this.generationResult = null;
+      this.testResults = null;
+      this.currentLoadingStep = 'Extracting intent from your rule description...';
+      
+      const request: RuleGenerationRequest = {
+        ruleStatement: this.ruleForm.value.ruleStatement,
+        ruleDescription: this.ruleForm.value.ruleDescription,
+        organizationId: this.ruleForm.value.organizationId,
+        exampleShiftStart: this.ruleForm.value.exampleShiftStart,
+        exampleShiftEnd: this.ruleForm.value.exampleShiftEnd,
+        expectedOutcome: this.ruleForm.value.expectedOutcome
+      };
+      
+      this.apiService.extractIntent(request).subscribe({
+        next: (result) => {
+          this.generationResult = result;
+          this.intentForm.patchValue({
+            reviewedIntent: result.intent
+          });
+          this.isLoading = false;
+          this.currentLoadingStep = '';
+          this.currentStep = 'intent-review';
+          
+          this.snackBar.open('Intent extracted successfully! Please review and edit if needed.', 'Close', {
+            duration: 4000,
+            panelClass: ['success-snackbar']
+          });
+        },
+        error: (error) => {
+          this.isLoading = false;
+          this.currentLoadingStep = '';
+          
+          this.snackBar.open(`Error extracting intent: ${error.message}`, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  // Step 2: Generate Code from Reviewed Intent
+  generateCode() {
+    if (this.intentForm.valid && this.generationResult) {
+      this.generatingCode = true;
+      this.currentLoadingStep = 'Generating C# code from your reviewed intent...';
+      
+      const reviewedIntent = this.intentForm.value.reviewedIntent;
+      
+      this.apiService.generateCode(this.generationResult.id, reviewedIntent).subscribe({
+        next: (result) => {
+          this.generationResult = result;
+          this.generatingCode = false;
+          this.currentLoadingStep = '';
+          this.currentStep = 'results';
+          
+          this.snackBar.open('Code generated successfully!', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+        },
+        error: (error) => {
+          this.generatingCode = false;
+          this.currentLoadingStep = '';
+          
+          this.snackBar.open(`Error generating code: ${error.message}`, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
+    }
+  }
+
+  // Legacy method for backwards compatibility
   generateRule() {
     if (this.ruleForm.valid) {
       this.isLoading = true;
       this.generationResult = null;
       this.testResults = null;
+      this.currentLoadingStep = 'Generating rule (single step)...';
       
       const request: RuleGenerationRequest = {
         ruleStatement: this.ruleForm.value.ruleStatement,
@@ -57,6 +145,7 @@ export class RuleGeneration implements OnInit {
           this.generationResult = result;
           this.isLoading = false;
           this.currentLoadingStep = '';
+          this.currentStep = 'results';
           
           this.snackBar.open('Rule generated successfully!', 'Close', {
             duration: 3000,
@@ -77,6 +166,18 @@ export class RuleGeneration implements OnInit {
   }
 
 
+  // Navigation methods
+  goBackToInput() {
+    this.currentStep = 'input';
+    this.generationResult = null;
+    this.testResults = null;
+  }
+
+  goBackToIntentReview() {
+    this.currentStep = 'intent-review';
+    this.testResults = null;
+  }
+
   clearForm() {
     this.ruleForm.reset({
       ruleStatement: '',
@@ -86,8 +187,12 @@ export class RuleGeneration implements OnInit {
       exampleShiftEnd: '',
       expectedOutcome: ''
     });
+    this.intentForm.reset({
+      reviewedIntent: ''
+    });
     this.generationResult = null;
     this.testResults = null;
+    this.currentStep = 'input';
   }
 
   testRule() {

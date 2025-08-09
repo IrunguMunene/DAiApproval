@@ -26,7 +26,18 @@ export class ApiService {
 
   constructor(private http: HttpClient) {}
 
-  // Rule Management API
+  // Rule Management API - Two-step workflow
+  extractIntent(request: RuleGenerationRequest): Observable<RuleGenerationResponse> {
+    return this.http.post<RuleGenerationResponse>(`${this.baseUrl}/rule/extract-intent`, request)
+      .pipe(catchError(this.handleError));
+  }
+
+  generateCode(ruleId: string, reviewedIntent: string): Observable<RuleGenerationResponse> {
+    return this.http.post<RuleGenerationResponse>(`${this.baseUrl}/rule/${ruleId}/generate-code`, { reviewedIntent })
+      .pipe(catchError(this.handleError));
+  }
+
+  // Rule Management API - Original single-step workflow (kept for backwards compatibility)
   generateRule(request: RuleGenerationRequest): Observable<RuleGenerationResponse> {
     return this.http.post<RuleGenerationResponse>(`${this.baseUrl}/rule/generate`, request)
       .pipe(catchError(this.handleError));

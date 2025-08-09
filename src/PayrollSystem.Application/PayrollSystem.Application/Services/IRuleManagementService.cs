@@ -5,6 +5,8 @@ namespace PayrollSystem.Application.Services;
 
 public interface IRuleManagementService
 {
+    Task<RuleGenerationResponseDto> ExtractIntentAsync(RuleGenerationRequestDto request, string createdBy);
+    Task<RuleGenerationResponseDto> GenerateCodeAsync(Guid ruleId, string reviewedIntent);
     Task<RuleGenerationResponseDto> GenerateRuleAsync(RuleGenerationRequestDto request, string createdBy);
     Task<bool> ActivateRuleAsync(Guid ruleId);
     Task<bool> DeactivateRuleAsync(Guid ruleId);

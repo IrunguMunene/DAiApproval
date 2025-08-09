@@ -15,6 +15,36 @@ public class RuleController : ControllerBase
         _ruleManagementService = ruleManagementService;
     }
 
+    [HttpPost("extract-intent")]
+    public async Task<IActionResult> ExtractIntent([FromBody] RuleGenerationRequestDto request)
+    {
+        try
+        {
+            // For demo purposes, use a default user
+            var createdBy = Request.Headers["X-User-Id"].FirstOrDefault() ?? "demo-user";
+            var result = await _ruleManagementService.ExtractIntentAsync(request, createdBy);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpPost("{ruleId}/generate-code")]
+    public async Task<IActionResult> GenerateCode(Guid ruleId, [FromBody] IntentReviewDto intentReview)
+    {
+        try
+        {
+            var result = await _ruleManagementService.GenerateCodeAsync(ruleId, intentReview.ReviewedIntent);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("generate")]
     public async Task<IActionResult> GenerateRule([FromBody] RuleGenerationRequestDto request)
     {

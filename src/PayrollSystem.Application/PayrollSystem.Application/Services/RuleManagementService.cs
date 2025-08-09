@@ -26,6 +26,113 @@ public class RuleManagementService : IRuleManagementService
         _codeFixingPromptService = codeFixingPromptService;
     }
 
+    public async Task<RuleGenerationResponseDto> ExtractIntentAsync(RuleGenerationRequestDto request, string createdBy)
+    {
+        // Create initial rule generation request with only intent extraction
+        RuleGenerationRequest generationRequest;
+        
+        if (request.ExampleShiftStart != default && request.ExampleShiftEnd != default && !string.IsNullOrEmpty(request.ExpectedOutcome))
+        {
+            // Extract intent with example
+            var intent = await _ruleGenerationService.ExtractIntentAsync(
+                request.RuleStatement, 
+                request.RuleDescription, 
+                request.ExampleShiftStart, 
+                request.ExampleShiftEnd, 
+                request.ExpectedOutcome);
+
+            generationRequest = new RuleGenerationRequest
+            {
+                RuleStatement = request.RuleStatement,
+                RuleDescription = request.RuleDescription,
+                OrganizationId = request.OrganizationId,
+                CreatedBy = createdBy,
+                Intent = intent,
+                Status = "IntentExtracted",
+                ExampleShiftStart = request.ExampleShiftStart,
+                ExampleShiftEnd = request.ExampleShiftEnd,
+                ExpectedOutcome = request.ExpectedOutcome
+            };
+        }
+        else
+        {
+            // Extract intent without example
+            var intent = await _ruleGenerationService.ExtractIntentAsync(request.RuleStatement, request.RuleDescription);
+
+            generationRequest = new RuleGenerationRequest
+            {
+                RuleStatement = request.RuleStatement,
+                RuleDescription = request.RuleDescription,
+                OrganizationId = request.OrganizationId,
+                CreatedBy = createdBy,
+                Intent = intent,
+                Status = "IntentExtracted"
+            };
+        }
+
+        // Save to database
+        await _generationRepository.AddAsync(generationRequest);
+        await _generationRepository.SaveChangesAsync();
+
+        return new RuleGenerationResponseDto
+        {
+            Id = generationRequest.Id,
+            RuleStatement = request.RuleStatement,
+            RuleDescription = request.RuleDescription,
+            Intent = generationRequest.Intent,
+            GeneratedCode = generationRequest.GeneratedCode,
+            Status = generationRequest.Status,
+            CompilationErrors = new List<string>(),
+            CreatedAt = generationRequest.CreatedAt,
+            CreatedBy = createdBy
+        };
+    }
+
+    public async Task<RuleGenerationResponseDto> GenerateCodeAsync(Guid ruleId, string reviewedIntent)
+    {
+        var generationRequest = await _generationRepository.GetByIdAsync(ruleId);
+        if (generationRequest == null)
+        {
+            throw new ArgumentException("Rule generation request not found", nameof(ruleId));
+        }
+
+        if (generationRequest.Status != "IntentExtracted")
+        {
+            throw new InvalidOperationException("Rule must be in 'IntentExtracted' status to generate code");
+        }
+
+        try
+        {
+            // Update the intent with user's reviewed version
+            generationRequest.Intent = reviewedIntent;
+            generationRequest.Status = "GeneratingCode";
+            generationRequest.LastModified = DateTime.UtcNow;
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+
+            // Generate code using the reviewed intent
+            var code = await _ruleGenerationService.GenerateCodeAsync(reviewedIntent, generationRequest.RuleStatement);
+            
+            generationRequest.GeneratedCode = code;
+            generationRequest.Status = "CodeGenerated";
+            generationRequest.LastModified = DateTime.UtcNow;
+            
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+
+            return ConvertToDto(generationRequest);
+        }
+        catch (Exception ex)
+        {
+            generationRequest.Status = "CodeGenerationFailed";
+            generationRequest.CompilationErrors = ex.Message;
+            generationRequest.LastModified = DateTime.UtcNow;
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+            throw;
+        }
+    }
+
     public async Task<RuleGenerationResponseDto> GenerateRuleAsync(RuleGenerationRequestDto request, string createdBy)
     {
         // Generate the rule using AI service with example data if provided
@@ -75,9 +182,22 @@ public class RuleManagementService : IRuleManagementService
     public async Task<bool> ActivateRuleAsync(Guid ruleId)
     {
         var generationRequest = await _generationRepository.GetByIdAsync(ruleId);
-        if (generationRequest == null || generationRequest.Status != "CodeGenerated")
+        // Rule must exist and have generated code to be activated
+        if (generationRequest == null)
         {
-            return false;
+            throw new ArgumentException($"Rule with ID {ruleId} not found");
+        }
+        
+        if (string.IsNullOrEmpty(generationRequest.GeneratedCode))
+        {
+            throw new InvalidOperationException($"Rule {ruleId} does not have generated code. Current status: {generationRequest.Status}");
+        }
+
+        // Rule must have completed code generation (supports both old and new workflow)
+        var validStatuses = new[] { "CodeGenerated", "Generated", "Complete" };
+        if (!validStatuses.Contains(generationRequest.Status))
+        {
+            throw new InvalidOperationException($"Rule {ruleId} cannot be activated. Current status: {generationRequest.Status}. Expected one of: {string.Join(", ", validStatuses)}");
         }
 
         try
