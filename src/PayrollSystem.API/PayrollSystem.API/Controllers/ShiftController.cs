@@ -4,9 +4,8 @@ using PayrollSystem.Application.Services;
 
 namespace PayrollSystem.API.Controllers;
 
-[ApiController]
 [Route("api/[controller]")]
-public class ShiftController : ControllerBase
+public class ShiftController : BaseController
 {
     private readonly IShiftClassificationService _classificationService;
 
@@ -21,11 +20,11 @@ public class ShiftController : ControllerBase
         try
         {
             var result = await _classificationService.ClassifyShiftAsync(request);
-            return Ok(result);
+            return Success(result);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "classify-shift");
         }
     }
 
@@ -35,11 +34,11 @@ public class ShiftController : ControllerBase
         try
         {
             var results = await _classificationService.ClassifyBatchAsync(request);
-            return Ok(results);
+            return Success(results);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "classify-batch");
         }
     }
 
@@ -49,7 +48,7 @@ public class ShiftController : ControllerBase
         try
         {
             var result = await _classificationService.TestRuleAsync(ruleId, request);
-            return Ok(result);
+            return Success(result);
         }
         catch (ArgumentException ex)
         {
@@ -57,7 +56,7 @@ public class ShiftController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "test-rule");
         }
     }
 
@@ -67,11 +66,11 @@ public class ShiftController : ControllerBase
         try
         {
             var result = await _classificationService.TestAllRulesAsync(request);
-            return Ok(result);
+            return Success(result);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "test-all-rules");
         }
     }
 
@@ -81,11 +80,11 @@ public class ShiftController : ControllerBase
         try
         {
             var results = await _classificationService.TestAllRulesBatchAsync(request);
-            return Ok(results);
+            return Success(results);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "test-all-rules-batch");
         }
     }
 }

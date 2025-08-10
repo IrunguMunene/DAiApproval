@@ -1,29 +1,80 @@
-<div class="code-display-container">
+<div class="code-display-container" [class.editing-mode]="isEditing">
   <div class="code-header" *ngIf="showHeader">
     <h4>{{ title }}</h4>
     <div class="header-actions">
-      <button 
-        mat-icon-button 
-        matTooltip="Copy to clipboard"
-        (click)="copyCode()"
-        *ngIf="showCopyButton">
-        <mat-icon>content_copy</mat-icon>
-      </button>
-      <button 
-        mat-icon-button 
-        matTooltip="Full screen"
-        (click)="toggleFullScreen()"
-        *ngIf="showFullScreenButton">
-        <mat-icon>{{ isFullScreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-      </button>
+      <!-- Edit mode buttons -->
+      <ng-container *ngIf="isEditing">
+        <button 
+          mat-icon-button 
+          matTooltip="Save changes (Ctrl+S)"
+          (click)="saveCode()"
+          [disabled]="!hasUnsavedChanges || isSaving"
+          class="save-button">
+          <mat-icon *ngIf="!isSaving">save</mat-icon>
+          <mat-spinner diameter="20" *ngIf="isSaving"></mat-spinner>
+        </button>
+        <button 
+          mat-icon-button 
+          matTooltip="Cancel editing"
+          (click)="exitEditMode()"
+          [disabled]="isSaving"
+          class="cancel-button">
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </ng-container>
+      
+      <!-- View mode buttons -->
+      <ng-container *ngIf="!isEditing">
+        <button 
+          mat-icon-button 
+          matTooltip="Edit code"
+          (click)="enterEditMode()"
+          *ngIf="editable"
+          class="edit-button">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          matTooltip="Copy to clipboard"
+          (click)="copyCode()"
+          *ngIf="showCopyButton">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          matTooltip="Full screen"
+          (click)="toggleFullScreen()"
+          *ngIf="showFullScreenButton">
+          <mat-icon>{{ isFullScreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+        </button>
+      </ng-container>
     </div>
   </div>
 
   <div class="code-wrapper" [class.full-screen]="isFullScreen">
-    <pre class="code-block language-{{ language }}"><code 
-      #codeElement 
-      class="language-{{ language }}"
-      [innerHTML]="highlightedCode">{{ code }}</code></pre>
+    <!-- Monaco Editor Container (shown when editing) -->
+    <div 
+      #monacoContainer 
+      class="monaco-editor-container"
+      *ngIf="isEditing"
+      [style.height]="isFullScreen ? 'calc(100vh - 120px)' : '400px'">
+    </div>
+    
+    <!-- Read-only code display (shown when not editing) -->
+    <pre 
+      class="code-block language-{{ language }}" 
+      *ngIf="!isEditing">
+      <code 
+        #codeElement 
+        class="language-{{ language }}"
+        [innerHTML]="highlightedCode">{{ currentCode }}</code>
+    </pre>
+  </div>
+  
+  <!-- Unsaved changes indicator -->
+  <div class="unsaved-changes-indicator" *ngIf="hasUnsavedChanges">
+    <mat-icon>warning</mat-icon>
+    <span>You have unsaved changes</span>
   </div>
   
   <div class="code-info" *ngIf="showInfo">
@@ -31,6 +82,7 @@
       <mat-chip color="primary" *ngIf="language">{{ language.toUpperCase() }}</mat-chip>
       <mat-chip *ngIf="lineCount">{{ lineCount }} lines</mat-chip>
       <mat-chip *ngIf="characterCount">{{ characterCount }} chars</mat-chip>
+      <mat-chip *ngIf="isEditing && hasUnsavedChanges" color="warn">MODIFIED</mat-chip>
     </mat-chip-listbox>
   </div>
 </div>

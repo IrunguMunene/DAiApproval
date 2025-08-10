@@ -106,8 +106,8 @@ public class ShiftClassificationService : IShiftClassificationService
         // If not loaded (e.g., after restart or inactive rule), compile temporarily
         if (classifier == null)
         {
-            // Generate unique temporary function name to avoid conflicts
-            var tempFunctionName = $"Test_{rule.FunctionName}_{Guid.NewGuid():N}";
+            // Generate unique temporary function name to avoid conflicts (replace hyphens with underscores to make valid C# identifier)
+            var tempFunctionName = $"Test_{rule.FunctionName}_{Guid.NewGuid():N}".Replace("-", "_");
             classifier = await _compilationService.CompileAndLoadTemporaryAsync(rule.GeneratedCode, tempFunctionName);
             
             if (classifier == null)

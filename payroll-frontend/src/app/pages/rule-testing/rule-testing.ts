@@ -3,6 +3,8 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ErrorHandlerService } from '../../services/error-handler.service';
+import { LoadingStateService } from '../../services/loading-state.service';
 import { 
   PayRule, 
   ShiftClassificationResult, 
@@ -37,8 +39,18 @@ export class RuleTesting implements OnInit {
   // Forms and UI state
   manualShiftForm!: FormGroup;
   selectedTab = 0;
-  isLoading = false;
-  isTesting = false;
+
+  // Loading context for this component
+  private loadingContext: any;
+
+  // Legacy loading state properties for template compatibility
+  get isLoading(): boolean {
+    return this.loadingContext?.isLoading('loadRules') || false;
+  }
+
+  get isTesting(): boolean {
+    return this.loadingContext?.isLoading('testShift') || this.loadingContext?.isLoading('testAllRules') || this.loadingContext?.isLoading('testCsvShifts') || false;
+  }
   
   // Rule selection
   availableRules: PayRule[] = [];
@@ -64,8 +76,12 @@ export class RuleTesting implements OnInit {
     private fb: FormBuilder,
     private apiService: ApiService,
     private snackBar: MatSnackBar,
-    private route: ActivatedRoute
-  ) {}
+    private route: ActivatedRoute,
+    private errorHandler: ErrorHandlerService,
+    private loadingStateService: LoadingStateService
+  ) {
+    this.loadingContext = this.loadingStateService.createLoadingContext('RuleTesting');
+  }
 
   ngOnInit() {
     this.initializeForm();
@@ -87,23 +103,25 @@ export class RuleTesting implements OnInit {
   }
 
   private loadAvailableRules() {
-    this.isLoading = true;
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.getActiveRules('demo-org'),
+      'loadRules',
+      'Loading available rules...'
+    );
     
-    this.apiService.getActiveRules('demo-org').subscribe({
-      next: (rules) => {
+    wrappedCall.subscribe({
+      next: (rules: PayRule[]) => {
         this.availableRules = rules;
-        this.isLoading = false;
         
         // Auto-select first active rule if none selected
         if (!this.selectedRuleId && this.availableRules.length > 0) {
           this.selectedRuleId = this.availableRules[0].id;
         }
       },
-      error: (error) => {
-        this.isLoading = false;
-        this.snackBar.open(`Error loading rules: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+      error: (error: any) => {
+        this.errorHandler.handleApiError(error, {
+          action: 'loading available rules',
+          component: 'RuleTesting'
         });
         this.availableRules = [];
       }
@@ -121,22 +139,15 @@ export class RuleTesting implements OnInit {
   // Manual shift testing
   testManualShift() {
     if (!this.manualShiftForm.valid) {
-      this.snackBar.open('Please fill all required fields', 'Close', {
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
+      this.errorHandler.handleWarning('Please fill all required fields', 3000);
       return;
     }
 
     if (this.testingMode === 'single' && !this.selectedRuleId) {
-      this.snackBar.open('Please select a rule to test', 'Close', {
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
+      this.errorHandler.handleWarning('Please select a rule to test', 3000);
       return;
     }
 
-    this.isTesting = true;
     const formValue = this.manualShiftForm.value;
     
     const testShift: TestShift = {
@@ -161,8 +172,14 @@ export class RuleTesting implements OnInit {
       organizationId: testShift.organizationId
     };
 
-    this.apiService.testShiftWithRule(this.selectedRuleId!, request).subscribe({
-      next: (result) => {
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.testShiftWithRule(this.selectedRuleId!, request),
+      'testShift',
+      'Testing shift with selected rule...'
+    );
+
+    wrappedCall.subscribe({
+      next: (result: ShiftClassificationResult) => {
         this.testResult = {
           shift: testShift,
           result: result,
@@ -170,17 +187,12 @@ export class RuleTesting implements OnInit {
         };
         this.orchestrationResult = null; // Clear orchestration results
         
-        this.isTesting = false;
-        this.snackBar.open('Shift tested successfully!', 'Close', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
+        this.errorHandler.handleSuccess('Shift tested successfully!', 3000);
       },
-      error: (error) => {
-        this.isTesting = false;
-        this.snackBar.open(`Error testing shift: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+      error: (error: any) => {
+        this.errorHandler.handleApiError(error, {
+          action: 'testing shift with rule',
+          component: 'RuleTesting'
         });
         // Fallback to simulated result for development
         this.testResult = {
@@ -204,22 +216,23 @@ export class RuleTesting implements OnInit {
       organizationId: testShift.organizationId
     };
 
-    this.apiService.testAllRules(request).subscribe({
-      next: (result) => {
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.testAllRules(request),
+      'testAllRules',
+      'Testing shift with all available rules...'
+    );
+
+    wrappedCall.subscribe({
+      next: (result: RuleOrchestrationResult) => {
         this.orchestrationResult = result;
         this.testResult = null; // Clear single rule results
         
-        this.isTesting = false;
-        this.snackBar.open('All rules tested and orchestrated successfully!', 'Close', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
+        this.errorHandler.handleSuccess('All rules tested and orchestrated successfully!', 3000);
       },
-      error: (error) => {
-        this.isTesting = false;
-        this.snackBar.open(`Error testing all rules: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+      error: (error: any) => {
+        this.errorHandler.handleApiError(error, {
+          action: 'testing all rules',
+          component: 'RuleTesting'
         });
         // Fallback to simulated orchestration result for development
         this.orchestrationResult = this.simulateOrchestrationResult(testShift);
@@ -241,10 +254,7 @@ export class RuleTesting implements OnInit {
       this.csvFile = file;
       this.parseCsvFile(file);
     } else {
-      this.snackBar.open('Please select a valid CSV file', 'Close', {
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
+      this.errorHandler.handleWarning('Please select a valid CSV file', 3000);
     }
   }
 
@@ -255,10 +265,7 @@ export class RuleTesting implements OnInit {
       this.csvShifts = this.parseCsvContent(csv);
       
       if (this.csvShifts.length > 0) {
-        this.snackBar.open(`Loaded ${this.csvShifts.length} shifts from CSV`, 'Close', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
+        this.errorHandler.handleSuccess(`Loaded ${this.csvShifts.length} shifts from CSV`, 3000);
       }
     };
     reader.readAsText(file);
@@ -287,14 +294,10 @@ export class RuleTesting implements OnInit {
 
   testCsvShifts() {
     if (!this.selectedRuleId || this.csvShifts.length === 0) {
-      this.snackBar.open('Please select a rule and upload a CSV file', 'Close', {
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
+      this.errorHandler.handleWarning('Please select a rule and upload a CSV file', 3000);
       return;
     }
 
-    this.isTesting = true;
     this.csvResults = [];
     this.csvProcessingProgress = 0;
 
@@ -313,8 +316,14 @@ export class RuleTesting implements OnInit {
     };
 
     // Try bulk API call first, fall back to sequential processing
-    this.apiService.testBulkShiftsWithRule(bulkRequest).subscribe({
-      next: (results) => {
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.testBulkShiftsWithRule(bulkRequest),
+      'testCsvShifts',
+      `Testing ${this.csvShifts.length} shifts from CSV...`
+    );
+
+    wrappedCall.subscribe({
+      next: (results: ShiftClassificationResult[]) => {
         this.csvResults = results.map((result, index) => ({
           shift: this.csvShifts[index],
           result: result,
@@ -322,14 +331,10 @@ export class RuleTesting implements OnInit {
         }));
         
         this.csvProcessingProgress = 100;
-        this.isTesting = false;
         
-        this.snackBar.open(`Processed ${results.length} shifts successfully!`, 'Close', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
+        this.errorHandler.handleSuccess(`Processed ${results.length} shifts successfully!`, 3000);
       },
-      error: (error) => {
+      error: (error: any) => {
         // Fall back to sequential processing
         console.warn('Bulk processing failed, falling back to sequential:', error.message);
         this.processShiftsSequentially(0);
@@ -339,12 +344,15 @@ export class RuleTesting implements OnInit {
 
   private processShiftsSequentially(index: number) {
     if (index >= this.csvShifts.length) {
-      this.isTesting = false;
-      this.snackBar.open(`Processed ${this.csvShifts.length} shifts successfully!`, 'Close', {
-        duration: 3000,
-        panelClass: ['success-snackbar']
-      });
+      // End loading state when processing is complete
+      this.loadingContext.setLoading('testCsvShifts', false);
+      this.errorHandler.handleSuccess(`Processed ${this.csvShifts.length} shifts successfully!`, 3000);
       return;
+    }
+    
+    // Ensure loading state is set for sequential processing
+    if (index === 0) {
+      this.loadingContext.setLoading('testCsvShifts', true);
     }
 
     const shift = this.csvShifts[index];
@@ -415,10 +423,7 @@ export class RuleTesting implements OnInit {
 
   exportResults() {
     if (this.csvResults.length === 0 && !this.testResult) {
-      this.snackBar.open('No test results to export', 'Close', {
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
+      this.errorHandler.handleWarning('No test results to export', 3000);
       return;
     }
 

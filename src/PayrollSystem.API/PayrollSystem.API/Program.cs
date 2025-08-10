@@ -34,6 +34,10 @@ builder.Services.AddScoped<ICodeFixingPromptService, PayrollSystem.Infrastructur
 // Add Ollama service
 builder.Services.AddOllamaService(builder.Configuration);
 
+// Add Vector Similarity Services
+builder.Services.AddScoped<IVectorEmbeddingService, OllamaEmbeddingService>();
+builder.Services.AddScoped<IVectorSimilarityService, QdrantVectorSimilarityService>();
+
 // Add CORS for frontend
 builder.Services.AddCors(options =>
 {
@@ -61,12 +65,33 @@ app.UseCors();
 app.UseHttpsRedirection();
 app.MapControllers();
 
-// Initialize database with enhanced error handling
+// Initialize database and vector similarity service with enhanced error handling
 try
 {
     using var scope = app.Services.CreateScope();
+    
+    // Initialize database
     var dbInitService = scope.ServiceProvider.GetRequiredService<PayrollSystem.Infrastructure.Services.IDatabaseInitializationService>();
     await dbInitService.InitializeAsync();
+    
+    // Initialize vector similarity service (only if enabled)
+    var vectorService = scope.ServiceProvider.GetRequiredService<IVectorSimilarityService>();
+    if (await vectorService.IsEnabledAsync())
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("Initializing vector similarity service...");
+        
+        try
+        {
+            await vectorService.InitializeAsync();
+            logger.LogInformation("Vector similarity service initialized successfully");
+        }
+        catch (Exception vectorEx)
+        {
+            logger.LogWarning(vectorEx, "Failed to initialize vector similarity service. Feature will be disabled.");
+            // Don't throw - let the app continue without vector similarity
+        }
+    }
 }
 catch (Exception ex)
 {

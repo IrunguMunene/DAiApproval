@@ -1,6 +1,7 @@
 using PayrollSystem.Application.DTOs;
 using PayrollSystem.Domain.Entities;
 using PayrollSystem.Domain.Interfaces;
+using PayrollSystem.Domain.Models;
 
 namespace PayrollSystem.Application.Services;
 
@@ -12,6 +13,7 @@ public class RuleManagementService : IRuleManagementService
     private readonly ICodeCompilationService _compilationService;
     private readonly ICodeFixingPromptService _codeFixingPromptService;
     private readonly IRuleCompilationAuditRepository _auditRepository;
+    private readonly IVectorSimilarityService _vectorSimilarityService;
 
     public RuleManagementService(
         IRuleGenerationRepository generationRepository,
@@ -19,7 +21,8 @@ public class RuleManagementService : IRuleManagementService
         IRuleGenerationService ruleGenerationService,
         ICodeCompilationService compilationService,
         ICodeFixingPromptService codeFixingPromptService,
-        IRuleCompilationAuditRepository auditRepository)
+        IRuleCompilationAuditRepository auditRepository,
+        IVectorSimilarityService vectorSimilarityService)
     {
         _generationRepository = generationRepository;
         _payRuleRepository = payRuleRepository;
@@ -27,6 +30,7 @@ public class RuleManagementService : IRuleManagementService
         _compilationService = compilationService;
         _codeFixingPromptService = codeFixingPromptService;
         _auditRepository = auditRepository;
+        _vectorSimilarityService = vectorSimilarityService;
     }
 
     public async Task<RuleGenerationResponseDto> ExtractIntentAsync(RuleGenerationRequestDto request, string createdBy)
@@ -205,8 +209,8 @@ public class RuleManagementService : IRuleManagementService
 
         try
         {
-            // Generate function name
-            var functionName = $"Rule_{ruleId:N}";
+            // Generate function name (replace hyphens with underscores to make valid C# identifier)
+            var functionName = $"Rule_{ruleId:N}".Replace("-", "_");
 
             // Compile the code
             var compilationResult = await _compilationService.CompileCodeAsync(
@@ -262,24 +266,48 @@ public class RuleManagementService : IRuleManagementService
                 return false;
             }
 
-            // Create PayRule entity
-            var payRule = new PayRule
+            // Check if PayRule already exists (might be inactive)
+            var existingPayRule = await _payRuleRepository.GetByIdAsync(generationRequest.Id);
+            
+            if (existingPayRule != null)
             {
-                RuleStatement = generationRequest.RuleDescription.Split(" - ")[0],
-                RuleDescription = generationRequest.RuleDescription,
-                FunctionName = functionName,
-                GeneratedCode = generationRequest.GeneratedCode,
-                OrganizationId = generationRequest.OrganizationId,
-                CreatedBy = generationRequest.CreatedBy,
-                IsActive = true
-            };
+                // Update existing PayRule to active
+                existingPayRule.IsActive = true;
+                existingPayRule.FunctionName = functionName;
+                existingPayRule.GeneratedCode = generationRequest.GeneratedCode;
+                existingPayRule.LastModified = DateTime.UtcNow;
+                await _payRuleRepository.UpdateAsync(existingPayRule);
+            }
+            else
+            {
+                // Create new PayRule entity
+                var payRule = new PayRule
+                {
+                    Id = generationRequest.Id, // Use the same ID as the generation request
+                    RuleStatement = generationRequest.RuleDescription.Split(" - ")[0],
+                    RuleDescription = generationRequest.RuleDescription,
+                    FunctionName = functionName,
+                    GeneratedCode = generationRequest.GeneratedCode,
+                    OrganizationId = generationRequest.OrganizationId,
+                    CreatedBy = generationRequest.CreatedBy,
+                    IsActive = true
+                };
 
-            await _payRuleRepository.AddAsync(payRule);
+                await _payRuleRepository.AddAsync(payRule);
+            }
             generationRequest.Status = "Active";
             await _generationRepository.UpdateAsync(generationRequest);
             
             await _payRuleRepository.SaveChangesAsync();
             await _generationRepository.SaveChangesAsync();
+            
+            // Store rule vector for similarity search (if enabled)
+            var finalPayRule = existingPayRule ?? await _payRuleRepository.GetByIdAsync(generationRequest.Id);
+            if (finalPayRule != null)
+            {
+                await StoreRuleVectorAsync(finalPayRule, generationRequest);
+            }
+            
             return true;
         }
         catch (Exception ex)
@@ -288,6 +316,11 @@ public class RuleManagementService : IRuleManagementService
             generationRequest.CompilationErrors = ex.Message;
             await _generationRepository.UpdateAsync(generationRequest);
             await _generationRepository.SaveChangesAsync();
+            
+            // Log the error for debugging
+            Console.WriteLine($"Rule activation failed: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            
             return false;
         }
     }
@@ -311,6 +344,11 @@ public class RuleManagementService : IRuleManagementService
     public async Task<List<PayRule>> GetActiveRulesAsync(string organizationId)
     {
         return await _payRuleRepository.GetActiveRulesAsync(organizationId);
+    }
+
+    public async Task<List<PayRule>> GetAllRulesAsync(string organizationId)
+    {
+        return await _payRuleRepository.GetAllRulesAsync(organizationId);
     }
 
     public async Task<List<RuleGenerationResponseDto>> GetRuleGenerationRequestsAsync(string organizationId)
@@ -497,14 +535,25 @@ public class RuleManagementService : IRuleManagementService
 
     public async Task<UpdateRuleCodeResponse> UpdateRuleCodeAsync(Guid ruleId, UpdateRuleCodeRequest request)
     {
+        // First check if it's an active rule in PayRules table
         var rule = await _payRuleRepository.GetByIdAsync(ruleId);
-        if (rule == null)
+        
+        // If not found in PayRules, check if it's a generation request with compilation errors
+        var generationRequest = rule == null ? await _generationRepository.GetByIdAsync(ruleId) : null;
+        
+        if (rule == null && generationRequest == null)
         {
             return new UpdateRuleCodeResponse
             {
                 Success = false,
-                Message = $"Rule with ID {ruleId} not found"
+                Message = $"Rule with ID {ruleId} not found in active rules or generation requests"
             };
+        }
+
+        // Handle updates to generation requests (rules with compilation errors)
+        if (rule == null && generationRequest != null)
+        {
+            return await UpdateGenerationRequestCodeAsync(generationRequest, request);
         }
 
         // Create audit record for the attempt
@@ -590,6 +639,176 @@ public class RuleManagementService : IRuleManagementService
             {
                 Success = false,
                 Message = $"An error occurred while updating rule code: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<VectorSearchResult> SearchSimilarRulesAsync(string ruleText, string organizationId)
+    {
+        try
+        {
+            if (!await _vectorSimilarityService.IsEnabledAsync())
+            {
+                return new VectorSearchResult(); // Return empty result if disabled
+            }
+
+            var searchRequest = new VectorSearchRequest
+            {
+                RuleText = ruleText,
+                OrganizationId = organizationId,
+                SimilarityThreshold = 0.8, // Could be configurable
+                MaxResults = 5
+            };
+
+            return await _vectorSimilarityService.SearchSimilarRulesAsync(searchRequest);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - similarity search is not critical
+            // Could add logging here if needed
+            return new VectorSearchResult();
+        }
+    }
+
+    private async Task StoreRuleVectorAsync(PayRule payRule, RuleGenerationRequest generationRequest)
+    {
+        try
+        {
+            if (!await _vectorSimilarityService.IsEnabledAsync())
+            {
+                return; // Skip if vector similarity is disabled
+            }
+
+            var intentText = generationRequest?.Intent ?? "";
+            
+            // Combine rule statement, description, and final reviewed intent for embedding
+            var ruleText = $"{payRule.RuleStatement} {payRule.RuleDescription} {intentText}";
+            
+            var metadata = new Dictionary<string, object>
+            {
+                ["rule_id"] = payRule.Id.ToString(),
+                ["rule_statement"] = payRule.RuleStatement,
+                ["rule_description"] = payRule.RuleDescription,
+                ["intent"] = intentText,
+                ["organization_id"] = payRule.OrganizationId,
+                ["created_by"] = payRule.CreatedBy,
+                ["created_at"] = payRule.CreatedAt.ToString("O"),
+                ["status"] = "Active"
+            };
+
+            await _vectorSimilarityService.StoreRuleVectorAsync(payRule.Id, ruleText, metadata);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - vector storage is not critical for rule activation
+            // Could add logging here if needed
+        }
+    }
+
+    private async Task<UpdateRuleCodeResponse> UpdateGenerationRequestCodeAsync(RuleGenerationRequest generationRequest, UpdateRuleCodeRequest request)
+    {
+        try
+        {
+            // Compile the updated code (replace hyphens with underscores to make valid C# identifier)
+            var compilationResult = await _compilationService.CompileCodeAsync(request.UpdatedCode, $"CalculatePayroll_{generationRequest.Id}".Replace("-", "_"));
+            
+            // Update the generation request with new code
+            generationRequest.GeneratedCode = request.UpdatedCode;
+            generationRequest.LastModified = DateTime.UtcNow;
+            generationRequest.GenerationAttemptCount += 1;
+
+            if (!compilationResult.Success)
+            {
+                // Still save the updated code even if compilation fails
+                generationRequest.Status = "CompilationFailed";
+                generationRequest.CompilationErrors = string.Join("; ", compilationResult.Errors);
+                
+                await _generationRepository.UpdateAsync(generationRequest);
+                await _generationRepository.SaveChangesAsync();
+
+                return new UpdateRuleCodeResponse
+                {
+                    Success = false,
+                    Message = "Code compilation failed",
+                    CompilationErrors = compilationResult.Errors,
+                    CompilationWarnings = compilationResult.Warnings
+                };
+            }
+
+            // Compilation succeeded - update status and potentially create/update active rule
+            generationRequest.Status = "CodeGenerated";
+            generationRequest.CompilationErrors = string.Empty;
+            
+            await _generationRepository.UpdateAsync(generationRequest);
+            await _generationRepository.SaveChangesAsync();
+
+            // Try to create or update the corresponding PayRule
+            PayRule updatedRule = null;
+            try
+            {
+                var existingRule = await _payRuleRepository.GetByIdAsync(generationRequest.Id);
+                
+                if (existingRule != null)
+                {
+                    // Update existing rule
+                    if (string.IsNullOrEmpty(existingRule.OriginalGeneratedCode))
+                    {
+                        existingRule.OriginalGeneratedCode = existingRule.GeneratedCode;
+                    }
+                    existingRule.GeneratedCode = request.UpdatedCode;
+                    existingRule.Version += 1;
+                    existingRule.LastModified = DateTime.UtcNow;
+                    existingRule.LastModifiedBy = request.ModifiedBy;
+                    
+                    updatedRule = await _payRuleRepository.UpdateAsync(existingRule);
+                }
+                else
+                {
+                    // Create new active rule
+                    var newRule = new PayRule
+                    {
+                        Id = generationRequest.Id,
+                        RuleStatement = generationRequest.RuleStatement,
+                        RuleDescription = generationRequest.RuleDescription,
+                        FunctionName = $"CalculatePayroll_{generationRequest.Id}".Replace("-", "_"),
+                        GeneratedCode = request.UpdatedCode,
+                        IsActive = false, // User needs to explicitly activate it
+                        Version = 1,
+                        CreatedAt = generationRequest.CreatedAt,
+                        LastModified = DateTime.UtcNow,
+                        CreatedBy = generationRequest.CreatedBy,
+                        LastModifiedBy = request.ModifiedBy,
+                        OrganizationId = generationRequest.OrganizationId
+                    };
+                    
+                    await _payRuleRepository.AddAsync(newRule);
+                    updatedRule = newRule;
+                }
+                
+                await _payRuleRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the operation
+                Console.WriteLine($"Failed to create/update PayRule: {ex.Message}");
+            }
+
+            return new UpdateRuleCodeResponse
+            {
+                Success = true,
+                Message = "Code updated and compiled successfully",
+                UpdatedRule = updatedRule,
+                CompilationErrors = new List<string>(),
+                CompilationWarnings = compilationResult.Warnings
+            };
+        }
+        catch (Exception ex)
+        {
+            return new UpdateRuleCodeResponse
+            {
+                Success = false,
+                Message = $"Error updating rule code: {ex.Message}",
+                CompilationErrors = new List<string> { ex.Message }
             };
         }
     }
