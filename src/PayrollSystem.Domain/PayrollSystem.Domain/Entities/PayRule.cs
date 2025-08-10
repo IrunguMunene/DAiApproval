@@ -10,6 +10,9 @@ public class PayRule
     public bool IsActive { get; set; } = true;
     public int Version { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime LastModified { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;
+    public string LastModifiedBy { get; set; } = string.Empty;
     public string OrganizationId { get; set; } = string.Empty;
+    public string? OriginalGeneratedCode { get; set; } = string.Empty; // Store original AI-generated code
 }

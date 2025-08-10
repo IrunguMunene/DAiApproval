@@ -12,6 +12,7 @@ public class PayrollDbContext : DbContext
     public DbSet<PayRule> PayRules { get; set; }
     public DbSet<RuleExecution> RuleExecutions { get; set; }
     public DbSet<RuleGenerationRequest> RuleGenerationRequests { get; set; }
+    public DbSet<RuleCompilationAudit> RuleCompilationAudits { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,11 +26,15 @@ public class PayrollDbContext : DbContext
             entity.Property(e => e.RuleDescription).HasMaxLength(1000);
             entity.Property(e => e.FunctionName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.GeneratedCode).HasColumnType("TEXT");
+            entity.Property(e => e.OriginalGeneratedCode).HasColumnType("TEXT");
             entity.Property(e => e.OrganizationId).HasMaxLength(50).IsRequired();
             entity.Property(e => e.CreatedBy).HasMaxLength(100);
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+            entity.Property(e => e.LastModified).IsRequired();
             
             entity.HasIndex(e => e.OrganizationId);
             entity.HasIndex(e => new { e.FunctionName, e.IsActive });
+            entity.HasIndex(e => e.Version);
         });
 
         // RuleExecution configuration
@@ -78,6 +83,25 @@ public class PayrollDbContext : DbContext
             entity.HasIndex(e => e.OrganizationId);
             entity.HasIndex(e => e.RequiresManualReview);
             entity.HasIndex(e => e.AutoFixAttempted);
+        });
+
+        // RuleCompilationAudit configuration
+        modelBuilder.Entity<RuleCompilationAudit>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AttemptedCode).HasColumnType("TEXT").IsRequired();
+            entity.Property(e => e.AttemptedBy).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.AttemptType).HasMaxLength(50).IsRequired();
+            
+            entity.HasOne(e => e.PayRule)
+                  .WithMany()
+                  .HasForeignKey(e => e.RuleId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasIndex(e => e.RuleId);
+            entity.HasIndex(e => e.AttemptedAt);
+            entity.HasIndex(e => e.CompilationSuccess);
+            entity.HasIndex(e => e.AttemptType);
         });
     }
 }

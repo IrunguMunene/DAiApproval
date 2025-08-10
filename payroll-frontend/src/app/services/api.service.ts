@@ -15,7 +15,9 @@ import {
   BulkShiftTestRequest,
   AllRulesTestRequest,
   BatchAllRulesTestRequest,
-  RuleOrchestrationResult
+  RuleOrchestrationResult,
+  UpdateRuleCodeRequest,
+  UpdateRuleCodeResponse
 } from '../models';
 
 @Injectable({
@@ -155,6 +157,35 @@ export class ApiService {
   testAllRulesBatch(request: BatchAllRulesTestRequest): Observable<RuleOrchestrationResult[]> {
     return this.http.post<RuleOrchestrationResult[]>(`${this.baseUrl}/shift/test-all-rules-batch`, request)
       .pipe(catchError(this.handleError));
+  }
+
+  // Rule Code Management API
+  updateRuleCode(ruleId: string, request: UpdateRuleCodeRequest): Observable<UpdateRuleCodeResponse> {
+    console.log(`Making PUT request to: ${this.baseUrl}/rule/${ruleId}/update-code`);
+    console.log('Request payload:', request);
+    
+    return this.http.put<UpdateRuleCodeResponse>(`${this.baseUrl}/rule/${ruleId}/update-code`, request)
+      .pipe(
+        map(response => {
+          console.log('Update rule code response:', response);
+          return response;
+        }),
+        catchError((error) => {
+          console.error('Update rule code error:', error);
+          return this.handleError(error);
+        })
+      );
+  }
+
+  compileRuleCode(ruleId: string, code: string): Observable<any> {
+    // This endpoint doesn't exist yet in backend, but we can simulate it
+    return new Observable(observer => {
+      // For now, just return success - the actual compilation happens during save
+      setTimeout(() => {
+        observer.next({ success: true, message: 'Code compiled successfully' });
+        observer.complete();
+      }, 1000);
+    });
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

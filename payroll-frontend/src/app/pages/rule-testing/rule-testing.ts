@@ -105,11 +105,7 @@ export class RuleTesting implements OnInit {
           duration: 5000,
           panelClass: ['error-snackbar']
         });
-        // Fallback to mock data for development
-        this.availableRules = this.generateMockRules();
-        if (!this.selectedRuleId && this.availableRules.length > 0) {
-          this.selectedRuleId = this.availableRules[0].id;
-        }
+        this.availableRules = [];
       }
     });
   }
@@ -565,44 +561,4 @@ export class RuleTesting implements OnInit {
     };
   }
 
-  private generateMockRules(): PayRule[] {
-    return [
-      {
-        id: '1',
-        ruleStatement: 'Overtime pay at 1.5x rate after 8 hours per day',
-        ruleDescription: 'Standard overtime calculation for daily work exceeding 8 hours',
-        functionName: 'CalculateOvertimeRule1',
-        generatedCode: '',
-        isActive: true,
-        version: 2,
-        createdAt: '2024-01-15T10:30:00Z',
-        createdBy: 'John Doe',
-        organizationId: 'demo-org'
-      },
-      {
-        id: '3',
-        ruleStatement: 'Night differential $3/hour between 11 PM and 7 AM',
-        ruleDescription: 'Additional compensation for overnight shifts',
-        functionName: 'CalculateNightDifferential',
-        generatedCode: '',
-        isActive: true,
-        version: 1,
-        createdAt: '2024-01-10T16:45:00Z',
-        createdBy: 'System',
-        organizationId: 'demo-org'
-      },
-      {
-        id: '4',
-        ruleStatement: 'Holiday pay at double time for federal holidays',
-        ruleDescription: 'Federal holiday compensation at 2x regular rate',
-        functionName: 'CalculateHolidayPay',
-        generatedCode: '',
-        isActive: true,
-        version: 3,
-        createdAt: '2024-01-08T09:15:00Z',
-        createdBy: 'Admin',
-        organizationId: 'demo-org'
-      }
-    ];
-  }
 }

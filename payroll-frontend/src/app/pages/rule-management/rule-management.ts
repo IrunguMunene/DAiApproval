@@ -3,7 +3,8 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
-import { PayRule, RuleGenerationResponse } from '../../models';
+import { PayRule, RuleGenerationResponse, UpdateRuleCodeRequest } from '../../models';
+import { CompilationError, SaveCodeEvent } from '../../components/code-editor/code-editor';
 
 @Component({
   selector: 'app-rule-management',
@@ -17,6 +18,8 @@ export class RuleManagement implements OnInit {
   filteredRules: PayRule[] = [];
   rulesWithErrors: RuleGenerationResponse[] = [];
   selectedRuleForViewing: PayRule | null = null;
+  selectedRuleCompilationErrors: CompilationError[] = [];
+  isCodeEditorLoading: boolean = false;
   
   // UI State
   isLoading = false;
@@ -74,8 +77,7 @@ export class RuleManagement implements OnInit {
           duration: 5000,
           panelClass: ['error-snackbar']
         });
-        // Fallback to mock data for development
-        this.allRules = this.generateMockRules();
+        this.allRules = [];
         this.filterRules();
       }
     });
@@ -176,6 +178,8 @@ export class RuleManagement implements OnInit {
 
   closeCodeViewer() {
     this.selectedRuleForViewing = null;
+    this.selectedRuleCompilationErrors = [];
+    this.isCodeEditorLoading = false;
   }
 
   testRule(rule: PayRule) {
@@ -405,263 +409,6 @@ export class RuleManagement implements OnInit {
     });
   }
 
-  // Mock data generation
-  private generateMockRules(): PayRule[] {
-    return [
-      {
-        id: '1',
-        ruleStatement: 'Overtime pay at 1.5x rate after 8 hours per day',
-        ruleDescription: 'Standard overtime calculation for daily work exceeding 8 hours',
-        functionName: 'CalculateOvertimeRule1',
-        generatedCode: this.generateSampleCode('overtime'),
-        isActive: true,
-        version: 2,
-        createdAt: '2024-01-15T10:30:00Z',
-        createdBy: 'John Doe',
-        organizationId: 'demo-org',
-        isProcessing: false
-      },
-      {
-        id: '2',
-        ruleStatement: 'Double time on Sundays for all hours worked',
-        ruleDescription: 'Sunday premium pay at double the regular rate',
-        functionName: 'CalculateSundayDoubleTime',
-        generatedCode: this.generateSampleCode('sunday'),
-        isActive: false,
-        version: 1,
-        createdAt: '2024-01-12T14:20:00Z',
-        createdBy: 'Jane Smith',
-        organizationId: 'demo-org',
-        isProcessing: false
-      },
-      {
-        id: '3',
-        ruleStatement: 'Night differential $3/hour between 11 PM and 7 AM',
-        ruleDescription: 'Additional compensation for overnight shifts',
-        functionName: 'CalculateNightDifferential',
-        generatedCode: this.generateSampleCode('night'),
-        isActive: true,
-        version: 1,
-        createdAt: '2024-01-10T16:45:00Z',
-        createdBy: 'System',
-        organizationId: 'demo-org',
-        isProcessing: false
-      },
-      {
-        id: '4',
-        ruleStatement: 'Holiday pay at double time for federal holidays',
-        ruleDescription: 'Federal holiday compensation at 2x regular rate',
-        functionName: 'CalculateHolidayPay',
-        generatedCode: this.generateSampleCode('holiday'),
-        isActive: true,
-        version: 3,
-        createdAt: '2024-01-08T09:15:00Z',
-        createdBy: 'Admin',
-        organizationId: 'demo-org',
-        isProcessing: false
-      },
-      {
-        id: '5',
-        ruleStatement: 'Weekend premium: 1.25x Saturday, 1.5x Sunday',
-        ruleDescription: 'Different premium rates for weekend work',
-        functionName: 'CalculateWeekendPremium',
-        generatedCode: this.generateSampleCode('weekend'),
-        isActive: false,
-        version: 1,
-        createdAt: '2024-01-05T11:30:00Z',
-        createdBy: 'HR Manager',
-        organizationId: 'demo-org',
-        isProcessing: false
-      }
-    ];
-  }
-
-  private generateSampleCode(type: string): string {
-    const codeTemplates = {
-      overtime: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    var totalHours = (shift.EndDateTime - shift.StartDateTime).TotalHours;
-    var regularHours = Math.Min(totalHours, 8.0);
-    var overtimeHours = Math.Max(0, totalHours - 8.0);
-    
-    var allocations = new List<PayCodeAllocation>();
-    
-    if (regularHours > 0)
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Regular",
-            Hours = regularHours,
-            Description = "Regular working hours"
-        });
-    }
-    
-    if (overtimeHours > 0)
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Overtime",
-            Hours = overtimeHours,
-            Description = "Overtime hours at 1.5x rate"
-        });
-    }
-    
-    return new ShiftClassificationResult
-    {
-        EmployeeName = shift.EmployeeName,
-        ShiftStart = shift.StartDateTime,
-        ShiftEnd = shift.EndDateTime,
-        PayCodeAllocations = allocations
-    };
-}`,
-      sunday: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    var totalHours = (shift.EndDateTime - shift.StartDateTime).TotalHours;
-    var isSunday = shift.StartDateTime.DayOfWeek == DayOfWeek.Sunday;
-    
-    var allocations = new List<PayCodeAllocation>();
-    
-    if (isSunday)
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Sunday Double Time",
-            Hours = totalHours,
-            Description = "Sunday work at double time rate"
-        });
-    }
-    else
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Regular",
-            Hours = totalHours,
-            Description = "Regular working hours"
-        });
-    }
-    
-    return new ShiftClassificationResult
-    {
-        EmployeeName = shift.EmployeeName,
-        ShiftStart = shift.StartDateTime,
-        ShiftEnd = shift.EndDateTime,
-        PayCodeAllocations = allocations
-    };
-}`,
-      night: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    var totalHours = (shift.EndDateTime - shift.StartDateTime).TotalHours;
-    var startHour = shift.StartDateTime.Hour;
-    var isNightShift = startHour >= 23 || startHour < 7;
-    
-    var allocations = new List<PayCodeAllocation>();
-    
-    allocations.Add(new PayCodeAllocation
-    {
-        PayCodeName = "Regular",
-        Hours = totalHours,
-        Description = "Base working hours"
-    });
-    
-    if (isNightShift)
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Night Differential",
-            Hours = totalHours,
-            Description = "$3/hour night shift differential"
-        });
-    }
-    
-    return new ShiftClassificationResult
-    {
-        EmployeeName = shift.EmployeeName,
-        ShiftStart = shift.StartDateTime,
-        ShiftEnd = shift.EndDateTime,
-        PayCodeAllocations = allocations
-    };
-}`,
-      holiday: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    var totalHours = (shift.EndDateTime - shift.StartDateTime).TotalHours;
-    var isHoliday = IsHoliday(shift.StartDateTime);
-    
-    var allocations = new List<PayCodeAllocation>();
-    
-    if (isHoliday)
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Holiday Pay",
-            Hours = totalHours,
-            Description = "Federal holiday at double time"
-        });
-    }
-    else
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Regular",
-            Hours = totalHours,
-            Description = "Regular working hours"
-        });
-    }
-    
-    return new ShiftClassificationResult
-    {
-        EmployeeName = shift.EmployeeName,
-        ShiftStart = shift.StartDateTime,
-        ShiftEnd = shift.EndDateTime,
-        PayCodeAllocations = allocations
-    };
-}`,
-      weekend: `public static ShiftClassificationResult CalculatePayroll(Shift shift)
-{
-    var totalHours = (shift.EndDateTime - shift.StartDateTime).TotalHours;
-    var dayOfWeek = shift.StartDateTime.DayOfWeek;
-    
-    var allocations = new List<PayCodeAllocation>();
-    
-    if (dayOfWeek == DayOfWeek.Saturday)
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Saturday Premium",
-            Hours = totalHours,
-            Description = "Saturday work at 1.25x rate"
-        });
-    }
-    else if (dayOfWeek == DayOfWeek.Sunday)
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Sunday Premium",
-            Hours = totalHours,
-            Description = "Sunday work at 1.5x rate"
-        });
-    }
-    else
-    {
-        allocations.Add(new PayCodeAllocation
-        {
-            PayCodeName = "Regular",
-            Hours = totalHours,
-            Description = "Regular working hours"
-        });
-    }
-    
-    return new ShiftClassificationResult
-    {
-        EmployeeName = shift.EmployeeName,
-        ShiftStart = shift.StartDateTime,
-        ShiftEnd = shift.EndDateTime,
-        PayCodeAllocations = allocations
-    };
-}`
-    };
-
-    return codeTemplates[type as keyof typeof codeTemplates] || codeTemplates.overtime;
-  }
 
   // Auto-fix related methods
   regenerateRule(rule: RuleGenerationResponse) {
@@ -734,6 +481,136 @@ export class RuleManagement implements OnInit {
       default:
         return 'status-chip default-chip';
     }
+  }
+
+  // Code Editor Event Handlers
+  onCodeChanged(code: string) {
+    // Handle code changes if needed
+    console.log('Code changed:', code.length, 'characters');
+  }
+
+  onSaveCode(event: SaveCodeEvent) {
+    if (!this.selectedRuleForViewing) {
+      console.error('No rule selected for editing');
+      return;
+    }
+
+    console.log('Saving code for rule:', this.selectedRuleForViewing.id);
+    console.log('Code length:', event.code.length);
+    console.log('Modified by:', event.modifiedBy);
+
+    this.isCodeEditorLoading = true;
+    this.selectedRuleCompilationErrors = [];
+
+    const request: UpdateRuleCodeRequest = {
+      updatedCode: event.code,
+      modifiedBy: event.modifiedBy
+    };
+
+    console.log('Sending update request:', request);
+
+    this.apiService.updateRuleCode(this.selectedRuleForViewing.id, request).subscribe({
+      next: (response) => {
+        this.isCodeEditorLoading = false;
+        
+        if (response.success) {
+          // Update the rule with new version
+          if (response.updatedRule) {
+            const ruleIndex = this.allRules.findIndex(r => r.id === this.selectedRuleForViewing!.id);
+            if (ruleIndex !== -1) {
+              this.allRules[ruleIndex] = response.updatedRule;
+              this.selectedRuleForViewing = response.updatedRule;
+              this.filterRules();
+            }
+          }
+
+          this.snackBar.open(response.message, 'Close', {
+            duration: 4000,
+            panelClass: ['success-snackbar']
+          });
+
+          // Show warnings if any
+          if (response.compilationWarnings.length > 0) {
+            this.snackBar.open(`Saved with ${response.compilationWarnings.length} warnings`, 'Close', {
+              duration: 3000,
+              panelClass: ['warning-snackbar']
+            });
+          }
+        } else {
+          // Show compilation errors
+          this.selectedRuleCompilationErrors = this.convertToCompilationErrors(response.compilationErrors);
+          
+          this.snackBar.open(response.message, 'Close', {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      },
+      error: (error) => {
+        this.isCodeEditorLoading = false;
+        this.snackBar.open(`Error updating rule: ${error.message}`, 'Close', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  onResetCode() {
+    if (!this.selectedRuleForViewing) return;
+
+    this.selectedRuleCompilationErrors = [];
+    this.snackBar.open('Code reset to original version', 'Close', {
+      duration: 2000,
+      panelClass: ['info-snackbar']
+    });
+  }
+
+  onCompileCode(code: string) {
+    if (!this.selectedRuleForViewing) return;
+
+    this.isCodeEditorLoading = true;
+    this.selectedRuleCompilationErrors = [];
+
+    this.apiService.compileRuleCode(this.selectedRuleForViewing.id, code).subscribe({
+      next: (response) => {
+        this.isCodeEditorLoading = false;
+        
+        if (response.success) {
+          this.snackBar.open('Code compiled successfully!', 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+        } else {
+          this.selectedRuleCompilationErrors = this.convertToCompilationErrors(response.errors || []);
+          this.snackBar.open('Compilation failed - see errors below', 'Close', {
+            duration: 4000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      },
+      error: (error) => {
+        this.isCodeEditorLoading = false;
+        this.snackBar.open(`Compilation check failed: ${error.message}`, 'Close', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  private convertToCompilationErrors(errorMessages: string[]): CompilationError[] {
+    return errorMessages.map(error => {
+      // Try to parse line numbers from error messages like "CS0103: error at line 15"
+      const lineMatch = error.match(/line (\d+)/i);
+      const line = lineMatch ? parseInt(lineMatch[1], 10) : 1;
+      
+      return {
+        line: line,
+        message: error,
+        severity: 'error' as const
+      };
+    });
   }
 
 }

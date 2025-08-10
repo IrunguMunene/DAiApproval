@@ -11,19 +11,22 @@ public class RuleManagementService : IRuleManagementService
     private readonly IRuleGenerationService _ruleGenerationService;
     private readonly ICodeCompilationService _compilationService;
     private readonly ICodeFixingPromptService _codeFixingPromptService;
+    private readonly IRuleCompilationAuditRepository _auditRepository;
 
     public RuleManagementService(
         IRuleGenerationRepository generationRepository,
         IPayRuleRepository payRuleRepository,
         IRuleGenerationService ruleGenerationService,
         ICodeCompilationService compilationService,
-        ICodeFixingPromptService codeFixingPromptService)
+        ICodeFixingPromptService codeFixingPromptService,
+        IRuleCompilationAuditRepository auditRepository)
     {
         _generationRepository = generationRepository;
         _payRuleRepository = payRuleRepository;
         _ruleGenerationService = ruleGenerationService;
         _compilationService = compilationService;
         _codeFixingPromptService = codeFixingPromptService;
+        _auditRepository = auditRepository;
     }
 
     public async Task<RuleGenerationResponseDto> ExtractIntentAsync(RuleGenerationRequestDto request, string createdBy)
@@ -489,6 +492,105 @@ public class RuleManagementService : IRuleManagementService
             await _generationRepository.UpdateAsync(generationRequest);
             await _generationRepository.SaveChangesAsync();
             return false;
+        }
+    }
+
+    public async Task<UpdateRuleCodeResponse> UpdateRuleCodeAsync(Guid ruleId, UpdateRuleCodeRequest request)
+    {
+        var rule = await _payRuleRepository.GetByIdAsync(ruleId);
+        if (rule == null)
+        {
+            return new UpdateRuleCodeResponse
+            {
+                Success = false,
+                Message = $"Rule with ID {ruleId} not found"
+            };
+        }
+
+        // Create audit record for the attempt
+        var auditRecord = new RuleCompilationAudit
+        {
+            RuleId = ruleId,
+            AttemptedCode = request.UpdatedCode,
+            AttemptedBy = request.ModifiedBy,
+            AttemptType = "Manual",
+            RuleVersionAttempted = rule.Version
+        };
+
+        try
+        {
+            // Compile the updated code
+            var compilationResult = await _compilationService.CompileCodeAsync(request.UpdatedCode, rule.FunctionName);
+            
+            // Update audit record with compilation results
+            auditRecord.CompilationSuccess = compilationResult.Success;
+            auditRecord.CompilationErrors = compilationResult.Errors;
+            auditRecord.CompilationWarnings = compilationResult.Warnings;
+            
+            await _auditRepository.AddAsync(auditRecord);
+            await _auditRepository.SaveChangesAsync();
+
+            if (!compilationResult.Success)
+            {
+                return new UpdateRuleCodeResponse
+                {
+                    Success = false,
+                    Message = "Code compilation failed",
+                    CompilationErrors = compilationResult.Errors,
+                    CompilationWarnings = compilationResult.Warnings
+                };
+            }
+
+            // Store original code if this is the first manual edit
+            if (string.IsNullOrEmpty(rule.OriginalGeneratedCode))
+            {
+                rule.OriginalGeneratedCode = rule.GeneratedCode;
+            }
+
+            // Update rule with new code and increment version
+            rule.GeneratedCode = request.UpdatedCode;
+            rule.Version += 1;
+            rule.LastModified = DateTime.UtcNow;
+            rule.LastModifiedBy = request.ModifiedBy;
+
+            // If rule is active, reload the compiled function
+            if (rule.IsActive)
+            {
+                var loadSuccess = await _compilationService.LoadCompiledFunctionAsync(rule.FunctionName, compilationResult.CompiledAssembly!);
+                if (!loadSuccess)
+                {
+                    return new UpdateRuleCodeResponse
+                    {
+                        Success = false,
+                        Message = "Code compiled successfully but failed to load the function"
+                    };
+                }
+            }
+
+            await _payRuleRepository.UpdateAsync(rule);
+            await _payRuleRepository.SaveChangesAsync();
+
+            return new UpdateRuleCodeResponse
+            {
+                Success = true,
+                Message = $"Rule code updated successfully. New version: {rule.Version}",
+                UpdatedRule = rule,
+                CompilationWarnings = compilationResult.Warnings
+            };
+        }
+        catch (Exception ex)
+        {
+            // Update audit record with exception
+            auditRecord.CompilationSuccess = false;
+            auditRecord.CompilationErrors = new List<string> { $"Exception: {ex.Message}" };
+            await _auditRepository.AddAsync(auditRecord);
+            await _auditRepository.SaveChangesAsync();
+
+            return new UpdateRuleCodeResponse
+            {
+                Success = false,
+                Message = $"An error occurred while updating rule code: {ex.Message}"
+            };
         }
     }
 }

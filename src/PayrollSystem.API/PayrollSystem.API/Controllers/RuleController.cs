@@ -174,4 +174,32 @@ public class RuleController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    [HttpPut("{ruleId}/update-code")]
+    public async Task<IActionResult> UpdateRuleCode(Guid ruleId, [FromBody] UpdateRuleCodeRequest request)
+    {
+        try
+        {
+            // Set the ModifiedBy from header if not provided
+            if (string.IsNullOrEmpty(request.ModifiedBy))
+            {
+                request.ModifiedBy = Request.Headers["X-User-Id"].FirstOrDefault() ?? "demo-user";
+            }
+
+            var result = await _ruleManagementService.UpdateRuleCodeAsync(ruleId, request);
+            
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            else
+            {
+                return BadRequest(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }

@@ -7,8 +7,11 @@ export interface PayRule {
   isActive: boolean;
   version: number;
   createdAt: string; // ISO date string
+  lastModified: string; // ISO date string
   createdBy: string;
+  lastModifiedBy: string;
   organizationId: string;
+  originalGeneratedCode?: string; // Store original AI-generated code
   isProcessing?: boolean; // Optional property for UI state management
 }
 
@@ -66,4 +69,18 @@ export interface TestRuleResponse {
   };
   success: boolean;
   error?: string;
+}
+
+export interface UpdateRuleCodeRequest {
+  updatedCode: string;
+  modifiedBy: string;
+}
+
+export interface UpdateRuleCodeResponse {
+  success: boolean;
+  message: string;
+  updatedRule?: PayRule;
+  compilationErrors: string[];
+  compilationWarnings: string[];
+  hasCompilationErrors: boolean;
 }

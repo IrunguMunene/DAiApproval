@@ -22,6 +22,7 @@ builder.Services.AddDbContext<PayrollDbContext>(options =>
 builder.Services.AddScoped<IPayRuleRepository, PayrollSystem.Infrastructure.Repositories.PayRuleRepository>();
 builder.Services.AddScoped<IRuleExecutionRepository, PayrollSystem.Infrastructure.Repositories.RuleExecutionRepository>();
 builder.Services.AddScoped<IRuleGenerationRepository, PayrollSystem.Infrastructure.Repositories.RuleGenerationRepository>();
+builder.Services.AddScoped<IRuleCompilationAuditRepository, PayrollSystem.Infrastructure.Repositories.RuleCompilationAuditRepository>();
 
 // Add application services
 builder.Services.AddScoped<IShiftClassificationService, ShiftClassificationService>();
