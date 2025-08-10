@@ -1,0 +1,92 @@
+<div class="code-editor-container" [class.full-screen]="isFullScreen">
+  <div class="code-header" *ngIf="showHeader">
+    <h4>{{ title }}</h4>
+    <div class="header-actions">
+      <button 
+        mat-icon-button 
+        matTooltip="Copy to clipboard"
+        (click)="copyCode()">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+      <button 
+        mat-icon-button 
+        matTooltip="{{ isEditing ? 'View mode' : 'Edit mode' }}"
+        (click)="isEditing ? exitEditMode() : enterEditMode()"
+        [disabled]="readonly">
+        <mat-icon>{{ isEditing ? 'visibility' : 'edit' }}</mat-icon>
+      </button>
+      <button 
+        mat-icon-button 
+        matTooltip="Full screen"
+        (click)="toggleFullScreen()">
+        <mat-icon>{{ isFullScreen ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Summary -->
+  <div class="error-summary" *ngIf="compilationErrors.length > 0">
+    <div class="error-header">
+      <mat-icon class="error-icon">error</mat-icon>
+      <span>{{ compilationErrors.length }} Compilation {{ compilationErrors.length === 1 ? 'Error' : 'Errors' }}</span>
+    </div>
+    <div class="error-list">
+      <div class="error-item" *ngFor="let error of compilationErrors">
+        <span class="error-line">Line {{ error.line }}:</span>
+        <span class="error-message">{{ error.message }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monaco Editor Container -->
+  <div class="monaco-editor-container">
+    <div #editorContainer class="monaco-editor" [class.full-screen]="isFullScreen"></div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="editor-actions" *ngIf="!readonly">
+    <div class="action-buttons">
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="onSave()"
+        [disabled]="!hasChanges || !canSave || isLoading">
+        <mat-icon>save</mat-icon>
+        Save Changes
+      </button>
+      <button 
+        mat-raised-button 
+        color="accent" 
+        (click)="onCompile()"
+        [disabled]="isLoading">
+        <mat-icon>build</mat-icon>
+        Test Compile
+      </button>
+      <button 
+        mat-stroked-button 
+        (click)="onReset()"
+        [disabled]="!hasChanges || isLoading">
+        <mat-icon>undo</mat-icon>
+        Reset to Original
+      </button>
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <mat-spinner diameter="20"></mat-spinner>
+      <span>Processing...</span>
+    </div>
+  </div>
+  
+  <!-- Code Info -->
+  <div class="code-info" *ngIf="showInfo">
+    <mat-chip-listbox>
+      <mat-chip color="primary" *ngIf="language">{{ language.toUpperCase() }}</mat-chip>
+      <mat-chip *ngIf="lineCount">{{ lineCount }} lines</mat-chip>
+      <mat-chip *ngIf="characterCount">{{ characterCount }} chars</mat-chip>
+      <mat-chip [class]="hasChanges ? 'modified-chip' : 'saved-chip'">
+        {{ hasChanges ? 'Modified' : 'Saved' }}
+      </mat-chip>
+    </mat-chip-listbox>
+  </div>
+</div>

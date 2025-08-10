@@ -530,13 +530,14 @@
     </div>
   </ng-template>
 
-  <!-- Code Viewer Dialog -->
+  <!-- Code Editor Dialog -->
   <div class="code-viewer-section" *ngIf="selectedRuleForViewing">
     <mat-card class="code-viewer-card">
       <mat-card-header>
         <mat-card-title>
           <mat-icon>code</mat-icon>
-          Generated Code: {{ selectedRuleForViewing.ruleStatement }}
+          Rule Code Editor: {{ selectedRuleForViewing.ruleStatement }}
+          <mat-chip class="version-chip">v{{ selectedRuleForViewing.version }}</mat-chip>
         </mat-card-title>
         <button mat-icon-button (click)="closeCodeViewer()" class="close-button">
           <mat-icon>close</mat-icon>
@@ -544,12 +545,19 @@
       </mat-card-header>
       
       <mat-card-content>
-        <app-code-display 
+        <app-code-editor 
           [code]="selectedRuleForViewing.generatedCode"
+          [originalCode]="selectedRuleForViewing.originalGeneratedCode || selectedRuleForViewing.generatedCode"
           [title]="'Rule: ' + selectedRuleForViewing.ruleStatement"
           [showHeader]="false"
-          [showInfo]="true">
-        </app-code-display>
+          [showInfo]="true"
+          [compilationErrors]="selectedRuleCompilationErrors"
+          [isLoading]="isCodeEditorLoading"
+          (codeChanged)="onCodeChanged($event)"
+          (saveCode)="onSaveCode($event)"
+          (resetCode)="onResetCode()"
+          (compileCode)="onCompileCode($event)">
+        </app-code-editor>
       </mat-card-content>
     </mat-card>
   </div>

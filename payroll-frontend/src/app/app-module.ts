@@ -37,6 +37,7 @@ import { RuleGeneration } from './pages/rule-generation/rule-generation';
 import { RuleManagement } from './pages/rule-management/rule-management';
 import { RuleTesting } from './pages/rule-testing/rule-testing';
 import { CodeDisplay } from './components/code-display/code-display';
+import { CodeEditor } from './components/code-editor/code-editor';
 
 @NgModule({
   declarations: [
@@ -45,7 +46,8 @@ import { CodeDisplay } from './components/code-display/code-display';
     RuleGeneration,
     RuleManagement,
     RuleTesting,
-    CodeDisplay
+    CodeDisplay,
+    CodeEditor
   ],
   imports: [
     BrowserModule,
