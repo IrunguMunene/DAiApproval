@@ -2,7 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApiService } from '../../services/api.service';
-import { RuleGenerationRequest, RuleGenerationResponse, ShiftClassificationResult, TestRuleRequest } from '../../models';
+import { ErrorHandlerService } from '../../services/error-handler.service';
+import { LoadingStateService } from '../../services/loading-state.service';
+import { RuleGenerationRequest, RuleGenerationResponse, ShiftClassificationResult, TestRuleRequest, VectorSearchResult, SimilaritySearchRequest } from '../../models';
 
 @Component({
   selector: 'app-rule-generation',
@@ -13,22 +15,47 @@ import { RuleGenerationRequest, RuleGenerationResponse, ShiftClassificationResul
 export class RuleGeneration implements OnInit {
   ruleForm!: FormGroup;
   intentForm!: FormGroup;
-  isLoading = false;
-  testingRule = false;
-  activatingRule = false;
-  generatingCode = false;
   currentLoadingStep = '';
+
+  // Loading context for this component
+  private loadingContext: any;
+
+  // Legacy loading state properties for template compatibility
+  get isLoading(): boolean {
+    return this.isExtractingIntent || this.loadingContext?.isLoading('generateRule') || false;
+  }
+
+  get testingRule(): boolean {
+    return this.isTestingRule;
+  }
+
+  get activatingRule(): boolean {
+    return this.isActivatingRule;
+  }
+
+  get generatingCode(): boolean {
+    return this.isGeneratingCode || this.loadingContext?.isLoading('generateCode') || false;
+  }
   
   // Workflow state
   currentStep: 'input' | 'intent-review' | 'results' = 'input';
   generationResult: RuleGenerationResponse | null = null;
   testResults: ShiftClassificationResult | null = null;
 
+  // Similarity search
+  similarRules: VectorSearchResult | null = null;
+  showingSimilarRules = false;
+  searchingSimilarRules = false;
+
   constructor(
     private fb: FormBuilder,
     private apiService: ApiService,
-    private snackBar: MatSnackBar
-  ) {}
+    private snackBar: MatSnackBar,
+    private errorHandler: ErrorHandlerService,
+    private loadingStateService: LoadingStateService
+  ) {
+    this.loadingContext = this.loadingStateService.createLoadingContext('RuleGeneration');
+  }
 
   ngOnInit() {
     this.ruleForm = this.fb.group({
@@ -45,10 +72,26 @@ export class RuleGeneration implements OnInit {
     });
   }
 
+  // Loading state getters
+  get isExtractingIntent(): boolean {
+    return this.loadingContext?.isLoading('extractIntent') || false;
+  }
+
+  get isGeneratingCode(): boolean {
+    return this.loadingContext?.isLoading('generateCode') || false;
+  }
+
+  get isTestingRule(): boolean {
+    return this.loadingContext?.isLoading('testRule') || false;
+  }
+
+  get isActivatingRule(): boolean {
+    return this.loadingContext?.isLoading('activateRule') || false;
+  }
+
   // Step 1: Extract Intent
   extractIntent() {
     if (this.ruleForm.valid) {
-      this.isLoading = true;
       this.generationResult = null;
       this.testResults = null;
       this.currentLoadingStep = 'Extracting intent from your rule description...';
@@ -62,71 +105,123 @@ export class RuleGeneration implements OnInit {
         expectedOutcome: this.ruleForm.value.expectedOutcome
       };
       
-      this.apiService.extractIntent(request).subscribe({
-        next: (result) => {
+      const wrappedCall = this.loadingContext.wrapLoading(
+        this.apiService.extractIntent(request),
+        'extractIntent',
+        'Extracting intent from rule description...'
+      );
+
+      wrappedCall.subscribe({
+        next: (result: RuleGenerationResponse) => {
           this.generationResult = result;
           this.intentForm.patchValue({
             reviewedIntent: result.intent
           });
-          this.isLoading = false;
           this.currentLoadingStep = '';
           this.currentStep = 'intent-review';
           
-          this.snackBar.open('Intent extracted successfully! Please review and edit if needed.', 'Close', {
-            duration: 4000,
-            panelClass: ['success-snackbar']
-          });
+          this.errorHandler.handleSuccess('Intent extracted successfully! Please review and edit if needed.', 4000);
         },
-        error: (error) => {
-          this.isLoading = false;
+        error: (error: any) => {
           this.currentLoadingStep = '';
           
-          this.snackBar.open(`Error extracting intent: ${error.message}`, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
+          this.errorHandler.handleApiError(error, {
+            action: 'extracting intent',
+            component: 'RuleGeneration'
           });
         }
       });
     }
   }
 
-  // Step 2: Generate Code from Reviewed Intent
+  // Step 2: Generate Code from Reviewed Intent (with similarity check)
   generateCode() {
     if (this.intentForm.valid && this.generationResult) {
-      this.generatingCode = true;
-      this.currentLoadingStep = 'Generating C# code from your reviewed intent...';
+      this.currentLoadingStep = 'Checking for similar rules...';
       
       const reviewedIntent = this.intentForm.value.reviewedIntent;
       
-      this.apiService.generateCode(this.generationResult.id, reviewedIntent).subscribe({
-        next: (result) => {
-          this.generationResult = result;
-          this.generatingCode = false;
-          this.currentLoadingStep = '';
-          this.currentStep = 'results';
-          
-          this.snackBar.open('Code generated successfully!', 'Close', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
-        },
-        error: (error) => {
-          this.generatingCode = false;
-          this.currentLoadingStep = '';
-          
-          this.snackBar.open(`Error generating code: ${error.message}`, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
-        }
-      });
+      // First, search for similar rules using rule statement + description + reviewed intent
+      this.searchSimilarRulesBeforeGeneration(reviewedIntent);
     }
+  }
+
+  private searchSimilarRulesBeforeGeneration(reviewedIntent: string) {
+    const ruleStatement = this.ruleForm.value.ruleStatement;
+    const ruleDescription = this.ruleForm.value.ruleDescription || '';
+    const fullRuleText = `${ruleStatement} ${ruleDescription} ${reviewedIntent}`;
+    
+    const request: SimilaritySearchRequest = {
+      ruleText: fullRuleText,
+      organizationId: this.ruleForm.value.organizationId || 'demo-org'
+    };
+    
+    this.apiService.searchSimilarRules(request).subscribe({
+      next: (result) => {
+        this.similarRules = result;
+        
+        if (result.hasSimilarRules) {
+          this.showingSimilarRules = true;
+          this.currentLoadingStep = '';
+          
+          this.errorHandler.handleWarning(`Found ${result.similarRules.length} similar rules! Please review before proceeding.`, 5000);
+        } else {
+          // No similar rules found, proceed with code generation
+          this.proceedWithCodeGeneration(reviewedIntent);
+        }
+      },
+      error: (error) => {
+        console.warn('Similarity search failed (non-critical):', error);
+        // If similarity search fails, proceed with code generation anyway
+        this.proceedWithCodeGeneration(reviewedIntent);
+      }
+    });
+  }
+
+  proceedWithCodeGeneration(reviewedIntent: string) {
+    this.showingSimilarRules = false;
+    this.currentLoadingStep = 'Generating C# code from your reviewed intent...';
+    
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.generateCode(this.generationResult!.id, reviewedIntent),
+      'generateCode',
+      'Generating C# code from reviewed intent...'
+    );
+
+    wrappedCall.subscribe({
+      next: (result: RuleGenerationResponse) => {
+        this.generationResult = result;
+        this.currentLoadingStep = '';
+        this.currentStep = 'results';
+        
+        this.errorHandler.handleSuccess('Code generated successfully!', 3000);
+      },
+      error: (error: any) => {
+        this.currentLoadingStep = '';
+        
+        this.errorHandler.handleApiError(error, {
+          action: 'generating code',
+          component: 'RuleGeneration'
+        });
+      }
+    });
+  }
+
+  // User decides to continue with code generation despite similar rules
+  continueWithGeneration() {
+    if (this.intentForm.valid && this.generationResult) {
+      const reviewedIntent = this.intentForm.value.reviewedIntent;
+      this.proceedWithCodeGeneration(reviewedIntent);
+    }
+  }
+
+  hideSimilarRules() {
+    this.showingSimilarRules = false;
   }
 
   // Legacy method for backwards compatibility
   generateRule() {
     if (this.ruleForm.valid) {
-      this.isLoading = true;
       this.generationResult = null;
       this.testResults = null;
       this.currentLoadingStep = 'Generating rule (single step)...';
@@ -140,25 +235,26 @@ export class RuleGeneration implements OnInit {
         expectedOutcome: this.ruleForm.value.expectedOutcome
       };
       
-      this.apiService.generateRule(request).subscribe({
-        next: (result) => {
+      const wrappedCall = this.loadingContext.wrapLoading(
+        this.apiService.generateRule(request),
+        'generateRule',
+        'Generating rule (single step)...'
+      );
+
+      wrappedCall.subscribe({
+        next: (result: RuleGenerationResponse) => {
           this.generationResult = result;
-          this.isLoading = false;
           this.currentLoadingStep = '';
           this.currentStep = 'results';
           
-          this.snackBar.open('Rule generated successfully!', 'Close', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
+          this.errorHandler.handleSuccess('Rule generated successfully!', 3000);
         },
-        error: (error) => {
-          this.isLoading = false;
+        error: (error: any) => {
           this.currentLoadingStep = '';
           
-          this.snackBar.open(`Error generating rule: ${error.message}`, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
+          this.errorHandler.handleApiError(error, {
+            action: 'generating rule',
+            component: 'RuleGeneration'
           });
         }
       });
@@ -198,8 +294,6 @@ export class RuleGeneration implements OnInit {
   testRule() {
     if (!this.generationResult) return;
     
-    this.testingRule = true;
-    
     const testRequest: TestRuleRequest = {
       shift: {
         employeeName: 'Test Employee',
@@ -209,27 +303,28 @@ export class RuleGeneration implements OnInit {
       }
     };
     
-    this.apiService.testRule(this.generationResult.id, testRequest).subscribe({
-      next: (response) => {
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.testRule(this.generationResult.id, testRequest),
+      'testRule',
+      'Testing generated rule...'
+    );
+
+    wrappedCall.subscribe({
+      next: (response: any) => {
         if (response.success) {
           this.testResults = response.result;
-          this.snackBar.open('Rule test completed!', 'Close', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
+          this.errorHandler.handleSuccess('Rule test completed!', 3000);
         } else {
-          this.snackBar.open(`Test failed: ${response.error}`, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
+          this.errorHandler.handleApiError({ message: response.error }, {
+            action: 'testing rule',
+            component: 'RuleGeneration'
           });
         }
-        this.testingRule = false;
       },
-      error: (error) => {
-        this.testingRule = false;
-        this.snackBar.open(`Error testing rule: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+      error: (error: any) => {
+        this.errorHandler.handleApiError(error, {
+          action: 'testing rule',
+          component: 'RuleGeneration'
         });
       }
     });
@@ -238,21 +333,20 @@ export class RuleGeneration implements OnInit {
   activateRule() {
     if (!this.generationResult) return;
     
-    this.activatingRule = true;
-    
-    this.apiService.activateRule(this.generationResult.id).subscribe({
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.activateRule(this.generationResult.id),
+      'activateRule',
+      'Activating rule...'
+    );
+
+    wrappedCall.subscribe({
       next: () => {
-        this.activatingRule = false;
-        this.snackBar.open('Rule activated successfully!', 'Close', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
+        this.errorHandler.handleSuccess('Rule activated successfully!', 3000);
       },
-      error: (error) => {
-        this.activatingRule = false;
-        this.snackBar.open(`Error activating rule: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+      error: (error: any) => {
+        this.errorHandler.handleApiError(error, {
+          action: 'activating rule',
+          component: 'RuleGeneration'
         });
       }
     });
@@ -328,14 +422,7 @@ export class RuleGeneration implements OnInit {
       }
     }
     
-    this.snackBar.open(
-      'Try providing more specific details about your rule requirements', 
-      'Close', 
-      {
-        duration: 5000,
-        panelClass: ['info-snackbar']
-      }
-    );
+    this.errorHandler.handleInfo('Try providing more specific details about your rule requirements', 5000);
   }
 
   private generateGuid(): string {

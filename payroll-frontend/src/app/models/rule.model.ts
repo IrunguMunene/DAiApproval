@@ -84,3 +84,42 @@ export interface UpdateRuleCodeResponse {
   compilationWarnings: string[];
   hasCompilationErrors: boolean;
 }
+
+export interface RuleSimilarity {
+  ruleId: string;
+  ruleStatement: string;
+  ruleDescription: string;
+  similarityScore: number;
+  organizationId: string;
+  createdAt: string; // ISO date string
+  createdBy: string;
+  status: string;
+}
+
+export interface VectorSearchRequest {
+  ruleText: string;
+  organizationId: string;
+  similarityThreshold?: number;
+  maxResults?: number;
+}
+
+export interface VectorSearchResult {
+  similarRules: RuleSimilarity[];
+  hasSimilarRules: boolean;
+  highestSimilarity: number;
+}
+
+export interface SimilaritySearchRequest {
+  ruleText: string;
+  organizationId: string;
+}
+
+export interface VectorStats {
+  enabled: boolean;
+  collection_name?: string;
+  points_count?: number;
+  vector_size?: number;
+  distance?: string;
+  message?: string;
+  error?: string;
+}

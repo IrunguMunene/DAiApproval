@@ -117,7 +117,7 @@
             
             <button mat-stroked-button 
                     (click)="refreshRules()"
-                    [disabled]="isLoading">
+                    [disabled]="isLoadingRules || isLoadingErrors">
               <mat-icon>refresh</mat-icon>
               Refresh
             </button>
@@ -135,7 +135,7 @@
   </div>
 
   <!-- Loading State -->
-  <div class="loading-section" *ngIf="isLoading">
+  <div class="loading-section" *ngIf="isLoadingRules">
     <mat-card>
       <mat-card-content>
         <div class="loading-content">
@@ -147,7 +147,7 @@
   </div>
 
   <!-- Tabs Section -->
-  <div class="tabs-section" *ngIf="!isLoading">
+  <div class="tabs-section" *ngIf="!isLoadingRules">
     <mat-card>
       <mat-tab-group [(selectedIndex)]="selectedTab" animationDuration="300ms">
         <!-- All Rules Tab -->
@@ -497,9 +497,12 @@
                     <h4>Generated Code</h4>
                     <app-code-display 
                       [code]="errorRule.generatedCode"
-                      [title]="'Failed Rule Code'"
-                      [showHeader]="false"
-                      [showInfo]="false">
+                      [title]="'Failed Rule Code (Editable)'"
+                      [showHeader]="true"
+                      [showInfo]="true"
+                      [editable]="true"
+                      [ruleId]="errorRule.id"
+                      (codeSaved)="onRuleCodeSaved($event)">
                     </app-code-display>
                   </div>
 

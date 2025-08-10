@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, throwError, map } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { BaseApiService } from './base-api.service';
 import { 
   PayRule, 
   RuleGenerationRequest, 
@@ -17,62 +18,57 @@ import {
   BatchAllRulesTestRequest,
   RuleOrchestrationResult,
   UpdateRuleCodeRequest,
-  UpdateRuleCodeResponse
+  UpdateRuleCodeResponse,
+  SimilaritySearchRequest,
+  VectorSearchResult,
+  VectorStats
 } from '../models';
 
 @Injectable({
   providedIn: 'root'
 })
-export class ApiService {
-  private baseUrl = environment.apiUrl || 'http://localhost:5163/api';
+export class ApiService extends BaseApiService {
 
-  constructor(private http: HttpClient) {}
+  constructor(http: HttpClient) {
+    super(http);
+  }
 
   // Rule Management API - Two-step workflow
   extractIntent(request: RuleGenerationRequest): Observable<RuleGenerationResponse> {
-    return this.http.post<RuleGenerationResponse>(`${this.baseUrl}/rule/extract-intent`, request)
-      .pipe(catchError(this.handleError));
+    return this.post<RuleGenerationResponse>('rule/extract-intent', request);
   }
 
   generateCode(ruleId: string, reviewedIntent: string): Observable<RuleGenerationResponse> {
-    return this.http.post<RuleGenerationResponse>(`${this.baseUrl}/rule/${ruleId}/generate-code`, { reviewedIntent })
-      .pipe(catchError(this.handleError));
+    return this.post<RuleGenerationResponse>(`rule/${ruleId}/generate-code`, { reviewedIntent });
   }
 
   // Rule Management API - Original single-step workflow (kept for backwards compatibility)
   generateRule(request: RuleGenerationRequest): Observable<RuleGenerationResponse> {
-    return this.http.post<RuleGenerationResponse>(`${this.baseUrl}/rule/generate`, request)
-      .pipe(catchError(this.handleError));
+    return this.post<RuleGenerationResponse>('rule/generate', request);
   }
 
   activateRule(ruleId: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/rule/${ruleId}/activate`, {})
-      .pipe(catchError(this.handleError));
+    return this.post(`rule/${ruleId}/activate`, {});
   }
 
   deactivateRule(ruleId: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/rule/${ruleId}/deactivate`, {})
-      .pipe(catchError(this.handleError));
+    return this.post(`rule/${ruleId}/deactivate`, {});
   }
 
   getActiveRules(organizationId: string): Observable<PayRule[]> {
-    return this.http.get<PayRule[]>(`${this.baseUrl}/rule/active?organizationId=${organizationId}`)
-      .pipe(catchError(this.handleError));
+    return this.getWithParams<PayRule[]>('rule/active', { organizationId });
   }
 
   getRuleGenerationRequests(organizationId: string): Observable<RuleGenerationResponse[]> {
-    return this.http.get<RuleGenerationResponse[]>(`${this.baseUrl}/rule/generation-requests?organizationId=${organizationId}`)
-      .pipe(catchError(this.handleError));
+    return this.getWithParams<RuleGenerationResponse[]>('rule/generation-requests', { organizationId });
   }
 
   getRuleById(ruleId: string): Observable<PayRule> {
-    return this.http.get<PayRule>(`${this.baseUrl}/rule/${ruleId}`)
-      .pipe(catchError(this.handleError));
+    return this.get<PayRule>(`rule/${ruleId}`);
   }
 
   getRulesWithCompilationErrors(organizationId: string): Observable<RuleGenerationResponse[]> {
-    return this.http.get<RuleGenerationResponse[]>(`${this.baseUrl}/rule/compilation-errors?organizationId=${organizationId}`)
-      .pipe(catchError(this.handleError));
+    return this.getWithParams<RuleGenerationResponse[]>('rule/compilation-errors', { organizationId });
   }
 
   regenerateRule(ruleId: string): Observable<any> {
@@ -114,9 +110,7 @@ export class ApiService {
 
   // Additional rule management methods  
   getAllRules(organizationId: string): Observable<PayRule[]> {
-    // Backend doesn't have a get-all endpoint, so we get active rules + generation requests
-    // For now, just use active rules as the primary source
-    return this.getActiveRules(organizationId);
+    return this.getWithParams<PayRule[]>('rule/all', { organizationId });
   }
 
   deleteRule(ruleId: string): Observable<any> {
@@ -188,18 +182,15 @@ export class ApiService {
     });
   }
 
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'An unknown error occurred!';
-    
-    if (error.error instanceof ErrorEvent) {
-      // Client-side error
-      errorMessage = `Error: ${error.error.message}`;
-    } else {
-      // Server-side error
-      errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
-    }
-    
-    console.error('API Error:', errorMessage);
-    return throwError(() => new Error(errorMessage));
+  // Vector Similarity API
+  searchSimilarRules(request: SimilaritySearchRequest): Observable<VectorSearchResult> {
+    return this.http.post<VectorSearchResult>(`${this.baseUrl}/rule/search-similar`, request)
+      .pipe(catchError(this.handleError));
   }
+
+  getVectorStats(): Observable<VectorStats> {
+    return this.http.get<VectorStats>(`${this.baseUrl}/rule/vector-stats`)
+      .pipe(catchError(this.handleError));
+  }
+
 }

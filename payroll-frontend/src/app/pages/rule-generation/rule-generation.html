@@ -166,6 +166,53 @@
             <mat-hint>Review the AI's understanding and make any necessary corrections before proceeding to code generation.</mat-hint>
           </mat-form-field>
 
+          <!-- Similar Rules Display -->
+          <div class="similar-rules-section" *ngIf="showingSimilarRules && similarRules">
+            <mat-card class="similar-rules-card">
+              <mat-card-header>
+                <mat-card-title class="warning-title">
+                  <mat-icon color="warn">warning</mat-icon>
+                  Similar Rules Found
+                </mat-card-title>
+                <mat-card-subtitle>
+                  We found {{ similarRules.similarRules.length }} similar rule(s) in your organization. 
+                  Please review to avoid duplicates.
+                </mat-card-subtitle>
+              </mat-card-header>
+              
+              <mat-card-content>
+                <div class="similar-rule" *ngFor="let rule of similarRules.similarRules" class="similar-rule-item">
+                  <div class="similarity-score">
+                    <mat-chip [style.background-color]="rule.similarityScore > 0.9 ? '#f44336' : rule.similarityScore > 0.8 ? '#ff9800' : '#4caf50'">
+                      {{ (rule.similarityScore * 100) | number:'1.0-0' }}% similar
+                    </mat-chip>
+                  </div>
+                  
+                  <div class="rule-details">
+                    <h4 class="rule-statement">{{ rule.ruleStatement }}</h4>
+                    <p class="rule-description" *ngIf="rule.ruleDescription">{{ rule.ruleDescription }}</p>
+                    <div class="rule-meta">
+                      <span class="created-by">Created by: {{ rule.createdBy }}</span>
+                      <span class="created-date">{{ rule.createdAt | date:'short' }}</span>
+                      <span class="status-badge" [class]="'status-' + rule.status.toLowerCase()">{{ rule.status }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="similar-rules-actions">
+                  <button mat-raised-button color="primary" (click)="continueWithGeneration()">
+                    <mat-icon>arrow_forward</mat-icon>
+                    Continue with New Rule
+                  </button>
+                  <button mat-stroked-button (click)="hideSimilarRules()">
+                    <mat-icon>close</mat-icon>
+                    Hide Similar Rules
+                  </button>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+
           <div class="form-actions">
             <button 
               mat-raised-button 

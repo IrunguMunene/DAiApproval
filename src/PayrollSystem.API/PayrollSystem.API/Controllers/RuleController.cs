@@ -1,18 +1,20 @@
 using Microsoft.AspNetCore.Mvc;
 using PayrollSystem.Application.DTOs;
 using PayrollSystem.Application.Services;
+using PayrollSystem.Domain.Interfaces;
 
 namespace PayrollSystem.API.Controllers;
 
-[ApiController]
 [Route("api/[controller]")]
-public class RuleController : ControllerBase
+public class RuleController : BaseController
 {
     private readonly IRuleManagementService _ruleManagementService;
+    private readonly IVectorSimilarityService _vectorSimilarityService;
 
-    public RuleController(IRuleManagementService ruleManagementService)
+    public RuleController(IRuleManagementService ruleManagementService, IVectorSimilarityService vectorSimilarityService)
     {
         _ruleManagementService = ruleManagementService;
+        _vectorSimilarityService = vectorSimilarityService;
     }
 
     [HttpPost("extract-intent")]
@@ -20,14 +22,13 @@ public class RuleController : ControllerBase
     {
         try
         {
-            // For demo purposes, use a default user
-            var createdBy = Request.Headers["X-User-Id"].FirstOrDefault() ?? "demo-user";
+            var createdBy = GetCurrentUserId();
             var result = await _ruleManagementService.ExtractIntentAsync(request, createdBy);
-            return Ok(result);
+            return Success(result);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "extract-intent");
         }
     }
 
@@ -37,11 +38,11 @@ public class RuleController : ControllerBase
         try
         {
             var result = await _ruleManagementService.GenerateCodeAsync(ruleId, intentReview.ReviewedIntent);
-            return Ok(result);
+            return Success(result);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "generate-code");
         }
     }
 
@@ -50,14 +51,13 @@ public class RuleController : ControllerBase
     {
         try
         {
-            // For demo purposes, use a default user
-            var createdBy = Request.Headers["X-User-Id"].FirstOrDefault() ?? "demo-user";
+            var createdBy = GetCurrentUserId();
             var result = await _ruleManagementService.GenerateRuleAsync(request, createdBy);
-            return Ok(result);
+            return Success(result);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "generate-rule");
         }
     }
 
@@ -69,13 +69,13 @@ public class RuleController : ControllerBase
             var success = await _ruleManagementService.ActivateRuleAsync(ruleId);
             if (success)
             {
-                return Ok(new { message = "Rule activated successfully" });
+                return Success("Rule activated successfully");
             }
-            return BadRequest(new { error = "Failed to activate rule" });
+            return HandleError(new InvalidOperationException("Failed to activate rule"), "activate-rule");
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "activate-rule");
         }
     }
 
@@ -87,13 +87,13 @@ public class RuleController : ControllerBase
             var success = await _ruleManagementService.DeactivateRuleAsync(ruleId);
             if (success)
             {
-                return Ok(new { message = "Rule deactivated successfully" });
+                return Success("Rule deactivated successfully");
             }
             return NotFound(new { error = "Rule not found" });
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "deactivate-rule");
         }
     }
 
@@ -103,11 +103,25 @@ public class RuleController : ControllerBase
         try
         {
             var rules = await _ruleManagementService.GetActiveRulesAsync(organizationId);
-            return Ok(rules);
+            return Success(rules);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "get-active-rules");
+        }
+    }
+
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllRules([FromQuery] string organizationId = "demo-org")
+    {
+        try
+        {
+            var rules = await _ruleManagementService.GetAllRulesAsync(organizationId);
+            return Success(rules);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "get-all-rules");
         }
     }
 
@@ -117,11 +131,11 @@ public class RuleController : ControllerBase
         try
         {
             var requests = await _ruleManagementService.GetRuleGenerationRequestsAsync(organizationId);
-            return Ok(requests);
+            return Success(requests);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "get-generation-requests");
         }
     }
 
@@ -135,11 +149,11 @@ public class RuleController : ControllerBase
             {
                 return NotFound(new { error = "Rule not found" });
             }
-            return Ok(rule);
+            return Success(rule);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "get-rule");
         }
     }
 
@@ -149,11 +163,11 @@ public class RuleController : ControllerBase
         try
         {
             var rulesWithErrors = await _ruleManagementService.GetRulesWithCompilationErrorsAsync(organizationId);
-            return Ok(rulesWithErrors);
+            return Success(rulesWithErrors);
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "get-compilation-errors");
         }
     }
 
@@ -165,13 +179,13 @@ public class RuleController : ControllerBase
             var success = await _ruleManagementService.RegenerateFailedRuleAsync(ruleId);
             if (success)
             {
-                return Ok(new { message = "Rule regeneration initiated successfully" });
+                return Success("Rule regeneration initiated successfully");
             }
-            return BadRequest(new { error = "Failed to regenerate rule" });
+            return HandleError(new InvalidOperationException("Failed to regenerate rule"), "regenerate-rule");
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "regenerate-rule");
         }
     }
 
@@ -180,17 +194,28 @@ public class RuleController : ControllerBase
     {
         try
         {
+            Console.WriteLine($"UpdateRuleCode called with ruleId: {ruleId}");
+            Console.WriteLine($"Request body: UpdatedCode length = {request?.UpdatedCode?.Length}, ModifiedBy = {request?.ModifiedBy}");
+            
+            if (request == null)
+            {
+                Console.WriteLine("Request is null!");
+                return BadRequest(new { error = "Request body is null" });
+            }
+
             // Set the ModifiedBy from header if not provided
             if (string.IsNullOrEmpty(request.ModifiedBy))
             {
-                request.ModifiedBy = Request.Headers["X-User-Id"].FirstOrDefault() ?? "demo-user";
+                request.ModifiedBy = GetCurrentUserId();
             }
+
+            Console.WriteLine($"Final request: UpdatedCode length = {request.UpdatedCode?.Length}, ModifiedBy = {request.ModifiedBy}");
 
             var result = await _ruleManagementService.UpdateRuleCodeAsync(ruleId, request);
             
             if (result.Success)
             {
-                return Ok(result);
+                return Success(result);
             }
             else
             {
@@ -199,7 +224,41 @@ public class RuleController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return HandleError(ex, "update-rule-code");
         }
     }
+
+    [HttpPost("search-similar")]
+    public async Task<IActionResult> SearchSimilarRules([FromBody] SimilaritySearchRequest request)
+    {
+        try
+        {
+            var result = await _ruleManagementService.SearchSimilarRulesAsync(request.RuleText, request.OrganizationId);
+            return Success(result);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "search-similar");
+        }
+    }
+
+    [HttpGet("vector-stats")]
+    public async Task<IActionResult> GetVectorStats()
+    {
+        try
+        {
+            var stats = await _vectorSimilarityService.GetCollectionStatsAsync();
+            return Success(stats);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "get-vector-stats");
+        }
+    }
+}
+
+public class SimilaritySearchRequest
+{
+    public string RuleText { get; set; } = string.Empty;
+    public string OrganizationId { get; set; } = "demo-org";
 }

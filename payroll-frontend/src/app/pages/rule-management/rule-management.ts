@@ -3,6 +3,9 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ErrorHandlerService } from '../../services/error-handler.service';
+import { LoadingStateService } from '../../services/loading-state.service';
+import { BulkOperationsService, BulkOperationConfig } from '../../services/bulk-operations.service';
 import { PayRule, RuleGenerationResponse, UpdateRuleCodeRequest } from '../../models';
 import { CompilationError, SaveCodeEvent } from '../../components/code-editor/code-editor';
 
@@ -32,11 +35,28 @@ export class RuleManagement implements OnInit {
   displayedColumns: string[] = ['select', 'status', 'name', 'created', 'version', 'actions'];
   selection = new SelectionModel<PayRule>(true, []);
 
+  // Loading context for this component
+  private loadingContext: any;
+
+  // Loading state getters
+  get isLoadingRules(): boolean {
+    return this.loadingContext?.isLoading('loadRules') || false;
+  }
+
+  get isLoadingErrors(): boolean {
+    return this.loadingContext?.isLoading('loadErrors') || false;
+  }
+
   constructor(
     private apiService: ApiService,
     private snackBar: MatSnackBar,
-    private router: Router
-  ) {}
+    private router: Router,
+    private errorHandler: ErrorHandlerService,
+    private loadingStateService: LoadingStateService,
+    private bulkOperations: BulkOperationsService
+  ) {
+    this.loadingContext = this.loadingStateService.createLoadingContext('RuleManagement');
+  }
 
   ngOnInit() {
     this.loadRules();
@@ -63,19 +83,22 @@ export class RuleManagement implements OnInit {
 
   // Data loading
   loadRules() {
-    this.isLoading = true;
-    
-    this.apiService.getAllRules(this.selectedOrganization).subscribe({
-      next: (rules) => {
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.getAllRules(this.selectedOrganization),
+      'loadRules',
+      'Loading rules...'
+    );
+
+    wrappedCall.subscribe({
+      next: (rules: PayRule[]) => {
         this.allRules = rules;
         this.filterRules();
-        this.isLoading = false;
+        // Remove the old isLoading = false since it's handled by loading service
       },
-      error: (error) => {
-        this.isLoading = false;
-        this.snackBar.open(`Error loading rules: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+      error: (error: any) => {
+        this.errorHandler.handleApiError(error, {
+          action: 'loading rules',
+          component: 'RuleManagement'
         });
         this.allRules = [];
         this.filterRules();
@@ -84,12 +107,21 @@ export class RuleManagement implements OnInit {
   }
 
   loadRulesWithErrors() {
-    this.apiService.getRulesWithCompilationErrors(this.selectedOrganization).subscribe({
-      next: (rules) => {
+    const wrappedCall = this.loadingContext.wrapLoading(
+      this.apiService.getRulesWithCompilationErrors(this.selectedOrganization),
+      'loadErrors',
+      'Loading compilation errors...'
+    );
+
+    wrappedCall.subscribe({
+      next: (rules: RuleGenerationResponse[]) => {
         this.rulesWithErrors = rules;
       },
-      error: (error) => {
-        console.error('Error loading rules with compilation errors:', error);
+      error: (error: any) => {
+        this.errorHandler.handleApiError(error, {
+          action: 'loading rules with compilation errors',
+          component: 'RuleManagement'
+        });
         this.rulesWithErrors = [];
       }
     });
@@ -99,7 +131,7 @@ export class RuleManagement implements OnInit {
     this.selection.clear();
     this.loadRules();
     this.loadRulesWithErrors();
-    this.snackBar.open('Rules refreshed successfully', 'Close', { duration: 2000 });
+    this.errorHandler.handleSuccess('Rules refreshed successfully', 2000);
   }
 
   // Filtering and search
@@ -155,18 +187,19 @@ export class RuleManagement implements OnInit {
         rule.isProcessing = false;
         
         const action = rule.isActive ? 'activated' : 'deactivated';
-        this.snackBar.open(`Rule ${action} successfully`, 'Close', { 
-          duration: 3000,
-          panelClass: rule.isActive ? ['success-snackbar'] : ['warning-snackbar']
-        });
+        if (rule.isActive) {
+          this.errorHandler.handleSuccess(`Rule ${action} successfully`);
+        } else {
+          this.errorHandler.handleWarning(`Rule ${action} successfully`);
+        }
         
         this.filterRules();
       },
       error: (error) => {
         rule.isProcessing = false;
-        this.snackBar.open(`Error updating rule: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+        this.errorHandler.handleApiError(error, {
+          action: 'updating rule status',
+          component: 'RuleManagement'
         });
       }
     });
@@ -251,118 +284,44 @@ export class RuleManagement implements OnInit {
 
   // Bulk actions
   bulkActivate() {
-    const selectedRules = this.selection.selected.filter(rule => !rule.isActive);
-    
-    if (selectedRules.length === 0) {
-      this.snackBar.open('No inactive rules selected', 'Close', {
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
-      return;
-    }
-    
-    let completedCount = 0;
-    let errorCount = 0;
-    
-    selectedRules.forEach(rule => {
-      rule.isProcessing = true;
-      
-      this.apiService.activateRule(rule.id).subscribe({
-        next: () => {
-          rule.isActive = true;
-          rule.isProcessing = false;
-          completedCount++;
-          
-          if (completedCount + errorCount === selectedRules.length) {
-            this.selection.clear();
-            this.filterRules();
-            
-            if (errorCount === 0) {
-              this.snackBar.open(`${completedCount} rules activated successfully`, 'Close', {
-                duration: 3000,
-                panelClass: ['success-snackbar']
-              });
-            } else {
-              this.snackBar.open(`${completedCount} rules activated, ${errorCount} failed`, 'Close', {
-                duration: 5000,
-                panelClass: ['warning-snackbar']
-              });
-            }
-          }
-        },
-        error: (error) => {
-          rule.isProcessing = false;
-          errorCount++;
-          
-          if (completedCount + errorCount === selectedRules.length) {
-            this.selection.clear();
-            this.filterRules();
-            
-            this.snackBar.open(`${completedCount} rules activated, ${errorCount} failed`, 'Close', {
-              duration: 5000,
-              panelClass: ['error-snackbar']
-            });
-          }
-        }
-      });
+    const config: BulkOperationConfig<PayRule> = {
+      items: this.selection.selected,
+      filterCondition: (rule: PayRule) => !rule.isActive,
+      apiCall: (rule: PayRule) => this.apiService.activateRule(rule.id),
+      onSuccess: (rule: PayRule) => {
+        rule.isActive = true;
+      },
+      operationName: 'activated',
+      noItemsMessage: 'No inactive rules selected',
+      processingProperty: 'isProcessing'
+    };
+
+    this.bulkOperations.performBulkOperation(config).subscribe(result => {
+      if (result.totalCount > 0) {
+        this.selection.clear();
+        this.filterRules();
+      }
     });
   }
 
   bulkDeactivate() {
-    const selectedRules = this.selection.selected.filter(rule => rule.isActive);
-    
-    if (selectedRules.length === 0) {
-      this.snackBar.open('No active rules selected', 'Close', {
-        duration: 3000,
-        panelClass: ['warning-snackbar']
-      });
-      return;
-    }
-    
-    let completedCount = 0;
-    let errorCount = 0;
-    
-    selectedRules.forEach(rule => {
-      rule.isProcessing = true;
-      
-      this.apiService.deactivateRule(rule.id).subscribe({
-        next: () => {
-          rule.isActive = false;
-          rule.isProcessing = false;
-          completedCount++;
-          
-          if (completedCount + errorCount === selectedRules.length) {
-            this.selection.clear();
-            this.filterRules();
-            
-            if (errorCount === 0) {
-              this.snackBar.open(`${completedCount} rules deactivated successfully`, 'Close', {
-                duration: 3000,
-                panelClass: ['success-snackbar']
-              });
-            } else {
-              this.snackBar.open(`${completedCount} rules deactivated, ${errorCount} failed`, 'Close', {
-                duration: 5000,
-                panelClass: ['warning-snackbar']
-              });
-            }
-          }
-        },
-        error: (error) => {
-          rule.isProcessing = false;
-          errorCount++;
-          
-          if (completedCount + errorCount === selectedRules.length) {
-            this.selection.clear();
-            this.filterRules();
-            
-            this.snackBar.open(`${completedCount} rules deactivated, ${errorCount} failed`, 'Close', {
-              duration: 5000,
-              panelClass: ['error-snackbar']
-            });
-          }
-        }
-      });
+    const config: BulkOperationConfig<PayRule> = {
+      items: this.selection.selected,
+      filterCondition: (rule: PayRule) => rule.isActive,
+      apiCall: (rule: PayRule) => this.apiService.deactivateRule(rule.id),
+      onSuccess: (rule: PayRule) => {
+        rule.isActive = false;
+      },
+      operationName: 'deactivated',
+      noItemsMessage: 'No active rules selected',
+      processingProperty: 'isProcessing'
+    };
+
+    this.bulkOperations.performBulkOperation(config).subscribe(result => {
+      if (result.totalCount > 0) {
+        this.selection.clear();
+        this.filterRules();
+      }
     });
   }
 
@@ -548,9 +507,9 @@ export class RuleManagement implements OnInit {
       },
       error: (error) => {
         this.isCodeEditorLoading = false;
-        this.snackBar.open(`Error updating rule: ${error.message}`, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+        this.errorHandler.handleApiError(error, {
+          action: 'updating rule code',
+          component: 'RuleManagement'
         });
       }
     });
@@ -611,6 +570,28 @@ export class RuleManagement implements OnInit {
         severity: 'error' as const
       };
     });
+  }
+
+  onRuleCodeSaved(event: { ruleId: string, code: string }) {
+    console.log('Rule code saved:', event);
+    
+    // Find the rule in rulesWithErrors and update it
+    const errorRuleIndex = this.rulesWithErrors.findIndex(r => r.id === event.ruleId);
+    if (errorRuleIndex !== -1) {
+      const errorRule = this.rulesWithErrors[errorRuleIndex];
+      errorRule.generatedCode = event.code;
+      errorRule.lastModified = new Date().toISOString();
+      
+      // If the rule was successfully saved, it might have moved to active rules
+      // Refresh both lists to ensure consistency
+      this.loadRules();
+      this.loadRulesWithErrors();
+      
+      this.snackBar.open(`Rule "${errorRule.ruleDescription}" updated successfully!`, 'Close', {
+        duration: 4000,
+        panelClass: ['success-snackbar']
+      });
+    }
   }
 
 }

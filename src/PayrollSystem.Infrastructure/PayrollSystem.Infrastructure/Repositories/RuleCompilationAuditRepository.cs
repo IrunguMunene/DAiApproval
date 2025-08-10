@@ -5,31 +5,17 @@ using PayrollSystem.Infrastructure.Data;
 
 namespace PayrollSystem.Infrastructure.Repositories;
 
-public class RuleCompilationAuditRepository : IRuleCompilationAuditRepository
+public class RuleCompilationAuditRepository : BaseRepository<RuleCompilationAudit>, IRuleCompilationAuditRepository
 {
-    private readonly PayrollDbContext _context;
-
-    public RuleCompilationAuditRepository(PayrollDbContext context)
+    public RuleCompilationAuditRepository(PayrollDbContext context) : base(context)
     {
-        _context = context;
-    }
-
-    public async Task<RuleCompilationAudit> AddAsync(RuleCompilationAudit audit)
-    {
-        var entry = await _context.RuleCompilationAudits.AddAsync(audit);
-        return entry.Entity;
     }
 
     public async Task<List<RuleCompilationAudit>> GetByRuleIdAsync(Guid ruleId)
     {
-        return await _context.RuleCompilationAudits
+        return await _dbSet
             .Where(a => a.RuleId == ruleId)
             .OrderByDescending(a => a.AttemptedAt)
             .ToListAsync();
-    }
-
-    public async Task SaveChangesAsync()
-    {
-        await _context.SaveChangesAsync();
     }
 }

@@ -2,26 +2,18 @@ using PayrollSystem.Domain.Entities;
 
 namespace PayrollSystem.Domain.Interfaces;
 
-public interface IPayRuleRepository
+public interface IPayRuleRepository : IOrganizationRepository<PayRule>
 {
     Task<List<PayRule>> GetActiveRulesAsync(string organizationId);
-    Task<PayRule?> GetByIdAsync(Guid id);
-    Task<PayRule> AddAsync(PayRule rule);
-    Task<PayRule> UpdateAsync(PayRule rule);
-    Task SaveChangesAsync();
+    Task<List<PayRule>> GetAllRulesAsync(string organizationId);
 }
 
-public interface IRuleExecutionRepository
+public interface IRuleExecutionRepository : IBaseRepository<RuleExecution>
 {
-    Task<RuleExecution> AddAsync(RuleExecution execution);
-    Task SaveChangesAsync();
+    // RuleExecution specific methods can be added here if needed
 }
 
-public interface IRuleGenerationRepository
+public interface IRuleGenerationRepository : IOrganizationRepository<RuleGenerationRequest>
 {
-    Task<List<RuleGenerationRequest>> GetByOrganizationAsync(string organizationId);
-    Task<RuleGenerationRequest?> GetByIdAsync(Guid id);
-    Task<RuleGenerationRequest> AddAsync(RuleGenerationRequest request);
-    Task<RuleGenerationRequest> UpdateAsync(RuleGenerationRequest request);
-    Task SaveChangesAsync();
+    // RuleGenerationRequest specific methods can be added here if needed
 }
